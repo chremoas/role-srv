@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package chremoas.permissions;
+
+enum AdminRoles {
+    SERVER_ADMIN = 0;
+    ROLE_ADMIN = 1;
+    SIG_ADMIN = 2;
+    CHANNEL_ADMIN = 3;
+}
+
+service Permissions {
+    rpc Perform (PermissionsRequest) returns (PerformResponse) {
+    };
+    rpc AddPermisssions (PermissionsRequest) returns (PermissionsResponse) {
+    };
+    rpc RemovePermissions (PermissionsRequest) returns (PermissionsResponse) {
+    };
+    rpc GetPermissions (PermissionsRequest) returns (PermissionsResponse) {
+    };
+}
+
+message PermissionsRequest {
+    string User = 1;
+    repeated AdminRoles PermissionsList = 2;
+}
+
+message PermissionsResponse {
+    repeated AdminRoles PermissionsList = 1;
+}
+
+message PerformResponse {
+    bool CanPerform = 1;
+}
