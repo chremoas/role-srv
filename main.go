@@ -8,12 +8,13 @@ import (
 )
 
 var Version = "1.0.0"
-var name = "permissions"
+var name = "role"
 
 func main() {
 	service := config.NewService(Version, "srv", name, config.NilInit)
 
-	chremoas_permissions.RegisterPermissionsHandler(service.Server(), handler.NewPermissionsHandler())
+	chremoas_role.RegisterPermissionsHandler(service.Server(), handler.NewPermissionsHandler())
+	chremoas_role.RegisterRolesHandler(service.Server(), handler.NewRolesHandler())
 
 	if err := service.Run(); err != nil {
 		fmt.Println(err)

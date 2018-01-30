@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package chremoas.role;
+
+service Roles {
+    rpc AddRole (AddRoleRequest) returns (AddRoleResponse) {
+    };
+    rpc RemoveRole (RemoveRoleRequest) returns (RemoveRoleResponse) {
+    };
+    rpc GetRoles (GetRolesRequest) returns (GetRolesResponse) {
+    };
+    rpc SyncRoles (SyncRolesRequest) returns (SyncRolesResponse) {
+    };
+}
+
+message DiscordRole {
+  string Name = 1;
+  int32 Color = 2;
+  bool Hoist = 3;
+  int32 Position = 4;
+  int32 Permissions = 5;
+  bool Managed = 6;
+  bool Mentionable = 7;
+  string RoleNick = 8;
+}
+
+message AddRoleRequest {
+    DiscordRole Role = 1;
+}
+
+message AddRoleResponse {}
+
+message RemoveRoleRequest {
+    string Name = 1;
+}
+
+message RemoveRoleResponse {}
+
+message GetRolesRequest {}
+
+message GetRolesResponse {
+    repeated DiscordRole Roles = 1;
+}
+
+message SyncRoles {
+    string Source = 1;
+    string Destination = 2;
+    string Name = 3;
+}
+message SyncRolesRequest {}
+
+message SyncRolesResponse {
+    repeated SyncRoles Roles = 1;
+}

@@ -7,31 +7,25 @@ import (
 )
 
 type permissionsHandler struct {
-	Client    client.Client
+	Client client.Client
 }
 
-func NewPermissionsHandler() chremoas_permissions.PermissionsHandler {
+func NewPermissionsHandler() chremoas_role.PermissionsHandler {
 	return &permissionsHandler{}
 }
 
-func (ph *permissionsHandler) Perform(ctx context.Context, request *chremoas_permissions.PermissionsRequest, response *chremoas_permissions.PerformResponse) error {
+func (h *permissionsHandler) Perform(ctx context.Context, request *chremoas_role.PermissionsRequest, response *chremoas_role.PerformResponse) error {
 	return nil
 }
 
-func (ph *permissionsHandler) AddPermisssions(ctx context.Context, request *chremoas_permissions.PermissionsRequest, response *chremoas_permissions.PermissionsResponse) error {
+func (h *permissionsHandler) AddPermisssions(ctx context.Context, request *chremoas_role.PermissionsRequest, response *chremoas_role.PermissionsResponse) error {
 	return nil
 }
 
-func (ph *permissionsHandler) RemovePermissions(ctx context.Context, request *chremoas_permissions.PermissionsRequest, response *chremoas_permissions.PermissionsResponse) error {
+func (h *permissionsHandler) RemovePermissions(ctx context.Context, request *chremoas_role.PermissionsRequest, response *chremoas_role.PermissionsResponse) error {
 	return nil
 }
 
-func (ph *permissionsHandler) GetPermissions(ctx context.Context, request *chremoas_permissions.PermissionsRequest, response *chremoas_permissions.PermissionsResponse) error {
-	var permissions []chremoas_permissions.AdminRoles
-
-	permissions = append(permissions, chremoas_permissions.AdminRoles_SERVER_ADMIN)
-
-	response.PermissionsList = permissions
-
+func (h *permissionsHandler) GetPermissions(ctx context.Context, request *chremoas_role.PermissionsRequest, response *chremoas_role.PermissionsResponse) error {
 	return nil
 }
