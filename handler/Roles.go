@@ -12,8 +12,6 @@ import (
 )
 
 type ClientFactory interface {
-	NewClient() uauthsvc.UserAuthenticationClient
-	NewAdminClient() uauthsvc.UserAuthenticationAdminClient
 	NewEntityQueryClient() uauthsvc.EntityQueryClient
 	NewEntityAdminClient() uauthsvc.EntityAdminClient
 	NewDiscordGatewayClient() discord.DiscordGatewayClient
