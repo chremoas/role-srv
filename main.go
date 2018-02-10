@@ -7,14 +7,16 @@ import (
 	"github.com/chremoas/services-common/config"
 	uauthsvc "github.com/chremoas/auth-srv/proto"
 	"github.com/micro/go-micro/client"
+	"github.com/micro/go-micro"
 	discord "github.com/chremoas/discord-gateway/proto"
 )
 
 var Version = "1.0.0"
+var service micro.Service
 var name = "role"
 
 func main() {
-	service := config.NewService(Version, "srv", name, config.NilInit)
+	service := config.NewService(Version, "srv", name, initialize)
 
 	chremoas_role.RegisterPermissionsHandler(service.Server(), handler.NewPermissionsHandler())
 	chremoas_role.RegisterRolesHandler(service.Server(), handler.NewRolesHandler())
@@ -22,6 +24,14 @@ func main() {
 	if err := service.Run(); err != nil {
 		fmt.Println(err)
 	}
+}
+
+func initialize(config *config.Configuration) error {
+	clientFactory := clientFactory{
+		name:        config.LookupService("srv", "auth"),
+		client:      service.Client()}
+
+	return nil
 }
 
 type clientFactory struct {
