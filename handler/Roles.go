@@ -1,15 +1,19 @@
 package handler
 
 import (
+	"errors"
+	"fmt"
 	uauthsvc "github.com/chremoas/auth-srv/proto"
 	discord "github.com/chremoas/discord-gateway/proto"
 	"github.com/chremoas/role-srv/proto"
+	"github.com/chremoas/services-common/config"
+	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/client"
 	"golang.org/x/net/context"
-	"errors"
-	"fmt"
 	"regexp"
 )
+
+var service micro.Service
 
 type ClientFactory interface {
 	NewEntityQueryClient() uauthsvc.EntityQueryClient
@@ -17,7 +21,25 @@ type ClientFactory interface {
 	NewDiscordGatewayClient() discord.DiscordGatewayClient
 }
 
-var clientFactory ClientFactory
+//var clientFactory ClientFactory
+
+type clients struct {
+	chremoasQuery uauthsvc.EntityQueryClient
+	chremoasAdmin uauthsvc.EntityAdminClient
+	discord       discord.DiscordGatewayClient
+}
+
+func initClientConnections() (clients, error) {
+	client := service.Client()
+
+	clients := clients{
+		chremoasQuery: uauthsvc.NewEntityQueryClient(config.LookupService("srv", "auth"), client),
+		chremoasAdmin: uauthsvc.NewEntityAdminClient(config.LookupService("srv", "auth"), client),
+		discord:       discord.NewDiscordGatewayClient(config.LookupService("gateway", "discord"), client),
+	}
+	// TODO: Catch errors or something
+	return clients, nil
+}
 
 type rolesHandler struct {
 	Client client.Client
@@ -28,13 +50,12 @@ func NewRolesHandler() chremoas_role.RolesHandler {
 }
 
 func (h *rolesHandler) AddRole(ctx context.Context, request *chremoas_role.AddRoleRequest, response *chremoas_role.AddRoleResponse) error {
-	chremoasClient := clientFactory.NewEntityAdminClient()
-	discordClient := clientFactory.NewDiscordGatewayClient()
+	clients, err := initClientConnections()
 
 	roleName := request.Role.Name
 	chatServiceGroup := request.Role.RoleNick
 
-	_, err := chremoasClient.RoleUpdate(ctx, &uauthsvc.RoleAdminRequest{
+	_, err = clients.chremoasAdmin.RoleUpdate(ctx, &uauthsvc.RoleAdminRequest{
 		Role:      &uauthsvc.Role{RoleName: roleName, ChatServiceGroup: chatServiceGroup},
 		Operation: uauthsvc.EntityOperation_ADD_OR_UPDATE,
 	})
@@ -43,7 +64,7 @@ func (h *rolesHandler) AddRole(ctx context.Context, request *chremoas_role.AddRo
 		return err
 	}
 
-	_, err = discordClient.CreateRole(ctx, &discord.CreateRoleRequest{Name: chatServiceGroup})
+	_, err = clients.discord.CreateRole(ctx, &discord.CreateRoleRequest{Name: chatServiceGroup})
 
 	if err != nil {
 		return err
@@ -54,12 +75,10 @@ func (h *rolesHandler) AddRole(ctx context.Context, request *chremoas_role.AddRo
 
 func (h *rolesHandler) RemoveRole(ctx context.Context, request *chremoas_role.RemoveRoleRequest, response *chremoas_role.RemoveRoleResponse) error {
 	var dRoleName string
-	chremoasClient := clientFactory.NewEntityAdminClient()
-	discordClient := clientFactory.NewDiscordGatewayClient()
+	clients, err := initClientConnections()
 	roleName := request.Name
 
-	chremoasQueryClient := clientFactory.NewEntityQueryClient()
-	chremoasRoles, err := chremoasQueryClient.GetRoles(ctx, &uauthsvc.EntityQueryRequest{})
+	chremoasRoles, err := clients.chremoasQuery.GetRoles(ctx, &uauthsvc.EntityQueryRequest{})
 
 	for cr := range chremoasRoles.List {
 		if chremoasRoles.List[cr].RoleName == roleName {
@@ -67,7 +86,7 @@ func (h *rolesHandler) RemoveRole(ctx context.Context, request *chremoas_role.Re
 		}
 	}
 
-	_, err = chremoasClient.RoleUpdate(ctx, &uauthsvc.RoleAdminRequest{
+	_, err = clients.chremoasAdmin.RoleUpdate(ctx, &uauthsvc.RoleAdminRequest{
 		Role:      &uauthsvc.Role{RoleName: roleName, ChatServiceGroup: "Doesn't matter"},
 		Operation: uauthsvc.EntityOperation_REMOVE,
 	})
@@ -76,7 +95,7 @@ func (h *rolesHandler) RemoveRole(ctx context.Context, request *chremoas_role.Re
 		return err
 	}
 
-	_, err = discordClient.DeleteRole(ctx, &discord.DeleteRoleRequest{Name: dRoleName})
+	_, err = clients.discord.DeleteRole(ctx, &discord.DeleteRoleRequest{Name: dRoleName})
 
 	if err != nil {
 		return err
@@ -86,8 +105,8 @@ func (h *rolesHandler) RemoveRole(ctx context.Context, request *chremoas_role.Re
 }
 
 func (h *rolesHandler) GetRoles(ctx context.Context, request *chremoas_role.GetRolesRequest, response *chremoas_role.GetRolesResponse) error {
-	chremoasClient := clientFactory.NewEntityQueryClient()
-	output, err := chremoasClient.GetRoles(ctx, &uauthsvc.EntityQueryRequest{})
+	clients, err := initClientConnections()
+	output, err := clients.chremoasQuery.GetRoles(ctx, &uauthsvc.EntityQueryRequest{})
 
 	if err != nil {
 		return err
@@ -109,26 +128,24 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *chremoas_role.Syn
 	var matchDBError = regexp.MustCompile(`^Error 1062:`)
 	var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
 
+	clients, err := initClientConnections()
+
 	//listDRoles(ctx, req)
-	discordClient := clientFactory.NewDiscordGatewayClient()
-	discordRoles, err := discordClient.GetAllRoles(ctx, &discord.GuildObjectRequest{})
+	discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
 
 	if err != nil {
 		return err
 	}
 
 	//listRoles(ctx, req)
-	chremoasClient := clientFactory.NewEntityQueryClient()
-	chremoasRoles, err := chremoasClient.GetRoles(ctx, &uauthsvc.EntityQueryRequest{})
+	chremoasRoles, err := clients.chremoasQuery.GetRoles(ctx, &uauthsvc.EntityQueryRequest{})
 
 	if err != nil {
 		return err
 	}
 
 	for dr := range discordRoles.Roles {
-		chremoasClient := clientFactory.NewEntityAdminClient()
-
-		_, err := chremoasClient.RoleUpdate(ctx, &uauthsvc.RoleAdminRequest{
+		_, err := clients.chremoasAdmin.RoleUpdate(ctx, &uauthsvc.RoleAdminRequest{
 			Role:      &uauthsvc.Role{ChatServiceGroup: discordRoles.Roles[dr].Name, RoleName: matchSpace.ReplaceAllString(discordRoles.Roles[dr].Name, "_")},
 			Operation: uauthsvc.EntityOperation_ADD_OR_UPDATE,
 		})
@@ -142,8 +159,7 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *chremoas_role.Syn
 	}
 
 	for cr := range chremoasRoles.List {
-		discordClient := clientFactory.NewDiscordGatewayClient()
-		_, err := discordClient.CreateRole(ctx, &discord.CreateRoleRequest{Name: chremoasRoles.List[cr].ChatServiceGroup})
+		_, err := clients.discord.CreateRole(ctx, &discord.CreateRoleRequest{Name: chremoasRoles.List[cr].ChatServiceGroup})
 
 		if err != nil {
 			if !matchDiscordError.MatchString(err.Error()) {
