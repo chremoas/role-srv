@@ -1,17 +1,18 @@
 package handler
 
 import (
+	"errors"
 	"github.com/chremoas/role-srv/proto"
+	"github.com/chremoas/services-common/config"
 	"github.com/micro/go-micro/client"
 	"golang.org/x/net/context"
-	"errors"
 )
 
 type permissionsHandler struct {
 	Client client.Client
 }
 
-func NewPermissionsHandler() chremoas_role.PermissionsHandler {
+func NewPermissionsHandler(conf config.Configuration) chremoas_role.PermissionsHandler {
 	return &permissionsHandler{}
 }
 

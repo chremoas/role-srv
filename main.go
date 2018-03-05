@@ -14,16 +14,20 @@ import (
 var Version = "1.0.0"
 var service micro.Service
 var name = "role"
+var conf *config.Configuration
 
 func main() {
-	service := config.NewService(Version, "srv", name, config.NilInit)
-
-	chremoas_role.RegisterPermissionsHandler(service.Server(), handler.NewPermissionsHandler())
-	chremoas_role.RegisterRolesHandler(service.Server(), handler.NewRolesHandler())
+	service := config.NewService(Version, "srv", name, initialize)
 
 	if err := service.Run(); err != nil {
 		fmt.Println(err)
 	}
+}
+
+func initialize(configuration *config.Configuration) error {
+	chremoas_role.RegisterPermissionsHandler(service.Server(), handler.NewPermissionsHandler(configuration))
+	chremoas_role.RegisterRolesHandler(service.Server(), handler.NewRolesHandler(configuration))
+	return nil
 }
 
 //var ClientFactory = clientFactory{
