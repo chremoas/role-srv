@@ -135,8 +135,10 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *chremoas_role.Syn
 			if !matchDBError.MatchString(err.Error()) {
 				return err
 			}
+			fmt.Printf("dr err: %+v\n", err)
+		} else {
+			response.Roles = append(response.Roles, &chremoas_role.SyncRoles{Source: "Discord", Destination: "Chremoas", Name: discordRoles.Roles[dr].Name})
 		}
-		response.Roles = append(response.Roles, &chremoas_role.SyncRoles{Source: "Discord", Destination: "Chremoas", Name: discordRoles.Roles[dr].Name})
 	}
 
 	for cr := range chremoasRoles.List {
@@ -146,16 +148,11 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *chremoas_role.Syn
 			if !matchDiscordError.MatchString(err.Error()) {
 				return err
 			}
+			fmt.Printf("cr err: %+v\n", err)
+		} else {
+			response.Roles = append(response.Roles, &chremoas_role.SyncRoles{Source: "Chremoas", Destination: "Discord", Name: chremoasRoles.List[cr].ChatServiceGroup})
 		}
-		response.Roles = append(response.Roles, &chremoas_role.SyncRoles{Source: "Chremoas", Destination: "Discord", Name: chremoasRoles.List[cr].ChatServiceGroup})
 	}
-
-	// Let's see what this looks like after it's run
-	fmt.Printf("response.Roles = %d\n", len(response.Roles))
-
-	//if buffer.Len() == 0 {
-	//	buffer.WriteString("No roles needed to be synced")
-	//}
 
 	return nil
 }
