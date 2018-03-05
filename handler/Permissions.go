@@ -12,7 +12,7 @@ type permissionsHandler struct {
 	Client client.Client
 }
 
-func NewPermissionsHandler(conf config.Configuration) chremoas_role.PermissionsHandler {
+func NewPermissionsHandler(conf *config.Configuration) chremoas_role.PermissionsHandler {
 	return &permissionsHandler{}
 }
 

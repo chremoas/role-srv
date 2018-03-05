@@ -24,29 +24,8 @@ func main() {
 	}
 }
 
-func initialize(configuration *config.Configuration) error {
-	chremoas_role.RegisterPermissionsHandler(service.Server(), handler.NewPermissionsHandler(configuration))
-	chremoas_role.RegisterRolesHandler(service.Server(), handler.NewRolesHandler(configuration))
+func initialize(config *config.Configuration) error {
+	chremoas_role.RegisterPermissionsHandler(service.Server(), handler.NewPermissionsHandler(config))
+	chremoas_role.RegisterRolesHandler(service.Server(), handler.NewRolesHandler(config))
 	return nil
 }
-
-//var ClientFactory = clientFactory{
-//	name:   config.LookupService("srv", "auth"),
-//	client: service.Client()}
-
-//type clientFactory struct {
-//	name   string
-//	client client.Client
-//}
-//
-//func (c clientFactory) NewEntityQueryClient() uauthsvc.EntityQueryClient {
-//	return uauthsvc.NewEntityQueryClient(c.name, c.client)
-//}
-//
-//func (c clientFactory) NewEntityAdminClient() uauthsvc.EntityAdminClient {
-//	return uauthsvc.NewEntityAdminClient(c.name, c.client)
-//}
-//
-//func (c clientFactory) NewDiscordGatewayClient() discord.DiscordGatewayClient {
-//	return discord.NewDiscordGatewayClient(c.name, c.client)
-//}
