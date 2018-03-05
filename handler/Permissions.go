@@ -5,6 +5,7 @@ import (
 	"github.com/chremoas/role-srv/proto"
 	"github.com/chremoas/services-common/config"
 	"github.com/micro/go-micro/client"
+	"github.com/micro/go-micro"
 	"golang.org/x/net/context"
 )
 
@@ -12,7 +13,7 @@ type permissionsHandler struct {
 	Client client.Client
 }
 
-func NewPermissionsHandler(conf *config.Configuration) chremoas_role.PermissionsHandler {
+func NewPermissionsHandler(conf *config.Configuration, service micro.Service) chremoas_role.PermissionsHandler {
 	return &permissionsHandler{}
 }
 

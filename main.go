@@ -17,7 +17,7 @@ var name = "role"
 var conf *config.Configuration
 
 func main() {
-	service := config.NewService(Version, "srv", name, initialize)
+	service = config.NewService(Version, "srv", name, initialize)
 
 	if err := service.Run(); err != nil {
 		fmt.Println(err)
@@ -25,7 +25,7 @@ func main() {
 }
 
 func initialize(config *config.Configuration) error {
-	chremoas_role.RegisterPermissionsHandler(service.Server(), handler.NewPermissionsHandler(config))
-	chremoas_role.RegisterRolesHandler(service.Server(), handler.NewRolesHandler(config))
+	chremoas_role.RegisterPermissionsHandler(service.Server(), handler.NewPermissionsHandler(config, service))
+	chremoas_role.RegisterRolesHandler(service.Server(), handler.NewRolesHandler(config, service))
 	return nil
 }

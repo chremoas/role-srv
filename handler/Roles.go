@@ -23,10 +23,9 @@ type clientList struct {
 	discord       discord.DiscordGatewayClient
 }
 
-var service micro.Service
 var clients clientList
 
-func NewRolesHandler(conf *config.Configuration) chremoas_role.RolesHandler {
+func NewRolesHandler(conf *config.Configuration, service micro.Service) chremoas_role.RolesHandler {
 	c := service.Client()
 
 	clients = clientList{
