@@ -21,7 +21,6 @@ func main() {
 }
 
 func initialize(config *config.Configuration) error {
-	chremoas_role.RegisterPermissionsHandler(service.Server(), handler.NewPermissionsHandler(config, service))
 	chremoas_role.RegisterRolesHandler(service.Server(), handler.NewRolesHandler(config, service))
 	return nil
 }
