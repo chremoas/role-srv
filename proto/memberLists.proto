@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package chremoas.roles;
+
+import "common.proto";
+
+service MemberLists {
+    rpc GetLists (NilMessage) returns (MemberListList) {};
+    rpc AddList (MemberList) returns (NilMessage) {};
+    rpc RemoveList (MemberList) returns (NilMessage) {};
+
+    rpc GetMembers (MemberList) returns (MemberInfoList) {};
+    rpc AddMember (MemberInfo) returns (NilMessage) {};
+    rpc RemoveMember (MemberInfo) returns (NilMessage) {};
+}
+
+message MemberListList {
+    repeated MemberList MemberLists = 1;
+}
+
+message MemberList {
+    string Name = 1;
+    string Description = 2;
+}
+
+message MemberInfo {
+    string Name = 1;
+    string List = 2;
+}
+
+message MemberInfoList {
+    repeated MemberInfo Members = 1;
+}

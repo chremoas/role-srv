@@ -25,7 +25,7 @@ type clientList struct {
 
 var clients clientList
 
-func NewRolesHandler(conf *config.Configuration, service micro.Service) chremoas_role.RolesHandler {
+func NewRolesHandler(conf *config.Configuration, service micro.Service) chremoas_roles.RolesHandler {
 	c := service.Client()
 
 	clients = clientList{
@@ -36,7 +36,7 @@ func NewRolesHandler(conf *config.Configuration, service micro.Service) chremoas
 	return &rolesHandler{}
 }
 
-func (h *rolesHandler) AddRole(ctx context.Context, request *chremoas_role.AddRoleRequest, response *chremoas_role.AddRoleResponse) error {
+func (h *rolesHandler) AddRole(ctx context.Context, request *chremoas_roles.AddRoleRequest, response *chremoas_roles.AddRoleResponse) error {
 	roleName := request.Role.Name
 	chatServiceGroup := request.Role.RoleNick
 
@@ -58,7 +58,7 @@ func (h *rolesHandler) AddRole(ctx context.Context, request *chremoas_role.AddRo
 	return nil
 }
 
-func (h *rolesHandler) RemoveRole(ctx context.Context, request *chremoas_role.RemoveRoleRequest, response *chremoas_role.RemoveRoleResponse) error {
+func (h *rolesHandler) RemoveRole(ctx context.Context, request *chremoas_roles.RemoveRoleRequest, response *chremoas_roles.RemoveRoleResponse) error {
 	var dRoleName string
 	roleName := request.Name
 
@@ -88,7 +88,7 @@ func (h *rolesHandler) RemoveRole(ctx context.Context, request *chremoas_role.Re
 	return nil
 }
 
-func (h *rolesHandler) GetRoles(ctx context.Context, request *chremoas_role.GetRolesRequest, response *chremoas_role.GetRolesResponse) error {
+func (h *rolesHandler) GetRoles(ctx context.Context, request *chremoas_roles.GetRolesRequest, response *chremoas_roles.GetRolesResponse) error {
 	output, err := clients.chremoasQuery.GetRoles(ctx, &uauthsvc.EntityQueryRequest{})
 
 	if err != nil {
@@ -100,13 +100,13 @@ func (h *rolesHandler) GetRoles(ctx context.Context, request *chremoas_role.GetR
 	}
 
 	for role := range output.List {
-		response.Roles = append(response.Roles, &chremoas_role.DiscordRole{Name: output.List[role].RoleName, RoleNick: output.List[role].ChatServiceGroup})
+		response.Roles = append(response.Roles, &chremoas_roles.DiscordRole{Name: output.List[role].RoleName, RoleNick: output.List[role].ChatServiceGroup})
 	}
 
 	return nil
 }
 
-func (h *rolesHandler) SyncRoles(ctx context.Context, request *chremoas_role.SyncRolesRequest, response *chremoas_role.SyncRolesResponse) error {
+func (h *rolesHandler) SyncRoles(ctx context.Context, request *chremoas_roles.SyncRolesRequest, response *chremoas_roles.SyncRolesResponse) error {
 	var matchSpace = regexp.MustCompile(`\s`)
 	var matchDBError = regexp.MustCompile(`^Error 1062:`)
 	var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
@@ -137,7 +137,7 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *chremoas_role.Syn
 			}
 			fmt.Printf("dr err: %+v\n", err)
 		} else {
-			response.Roles = append(response.Roles, &chremoas_role.SyncRoles{Source: "Discord", Destination: "Chremoas", Name: discordRoles.Roles[dr].Name})
+			response.Roles = append(response.Roles, &chremoas_roles.SyncRoles{Source: "Discord", Destination: "Chremoas", Name: discordRoles.Roles[dr].Name})
 		}
 	}
 
@@ -150,7 +150,7 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *chremoas_role.Syn
 			}
 			fmt.Printf("cr err: %+v\n", err)
 		} else {
-			response.Roles = append(response.Roles, &chremoas_role.SyncRoles{Source: "Chremoas", Destination: "Discord", Name: chremoasRoles.List[cr].ChatServiceGroup})
+			response.Roles = append(response.Roles, &chremoas_roles.SyncRoles{Source: "Chremoas", Destination: "Discord", Name: chremoasRoles.List[cr].ChatServiceGroup})
 		}
 	}
 

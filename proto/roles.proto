@@ -1,45 +1,37 @@
 syntax = "proto3";
 
-package chremoas.role;
+package chremoas.roles;
+
+import "common.proto";
 
 service Roles {
-    rpc AddRole (AddRoleRequest) returns (AddRoleResponse) {
-    };
-    rpc RemoveRole (RemoveRoleRequest) returns (RemoveRoleResponse) {
-    };
-    rpc GetRoles (GetRolesRequest) returns (GetRolesResponse) {
-    };
-    rpc SyncRoles (SyncRolesRequest) returns (SyncRolesResponse) {
-    };
+    rpc AddRole (Role) returns (NilMessage) {};
+    rpc UpdateRole (Role) returns (NilMessage) {};
+    rpc RemoveRole (RemoveRoleRequest) returns (NilMessage) {};
+    rpc GetRoles (NilMessage) returns (GetRolesResponse) {};
+    rpc SyncRoles (NilMessage) returns (SyncRolesResponse) {};
 }
 
-message DiscordRole {
-  string Name = 1;
-  int32 Color = 2;
-  bool Hoist = 3;
-  int32 Position = 4;
-  int32 Permissions = 5;
-  bool Managed = 6;
-  bool Mentionable = 7;
-  string RoleNick = 8;
-}
+message Role {
+    string Type = 1;
+    string ShortName = 2;
 
-message AddRoleRequest {
-    DiscordRole Role = 1;
+    // Discord
+    string Name = 3;
+    int32 Color = 4;
+    bool Hoist = 5;
+    int32 Position = 6;
+    int32 Permissions = 7;
+    bool Managed = 8;
+    bool Mentionable = 9;
 }
-
-message AddRoleResponse {}
 
 message RemoveRoleRequest {
     string Name = 1;
 }
 
-message RemoveRoleResponse {}
-
-message GetRolesRequest {}
-
 message GetRolesResponse {
-    repeated DiscordRole Roles = 1;
+    repeated Role Roles = 1;
 }
 
 message SyncRoles {
@@ -47,7 +39,6 @@ message SyncRoles {
     string Destination = 2;
     string Name = 3;
 }
-message SyncRolesRequest {}
 
 message SyncRolesResponse {
     repeated SyncRoles Roles = 1;

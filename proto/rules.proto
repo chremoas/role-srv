@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package chremoas.roles;
+
+import "common.proto";
+
+service Rules {
+    rpc AddRule (Rule) returns (NilMessage) {};
+    rpc UpdateRule (Rule) returns (NilMessage) {};
+    rpc RemoveRule (RemoveRuleRequest) returns (NilMessage) {};
+    rpc GetRules (NilMessage) returns (RulesList) {};
+}
+
+message Rule {
+    string Name = 1;
+    string Role = 2;
+    string filterA = 3;
+    string filterB = 4;
+}
+
+message RemoveRuleRequest {
+    string Name = 1;
+}
+
+message RulesList {
+    repeated Rule Rules = 1;
+}
