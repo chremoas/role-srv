@@ -4,21 +4,21 @@ package chremoas.roles;
 
 import "common.proto";
 
-service MemberLists {
-    rpc GetLists (NilMessage) returns (MemberListList) {};
-    rpc AddList (MemberList) returns (NilMessage) {};
-    rpc RemoveList (MemberList) returns (NilMessage) {};
+service Filters {
+    rpc GetLists (NilMessage) returns (FilterList) {};
+    rpc AddList (FilterList) returns (NilMessage) {};
+    rpc RemoveList (FilterList) returns (NilMessage) {};
 
-    rpc GetMembers (MemberList) returns (MemberInfoList) {};
+    rpc GetMembers (FilterList) returns (MemberInfoList) {};
     rpc AddMember (MemberInfo) returns (NilMessage) {};
     rpc RemoveMember (MemberInfo) returns (NilMessage) {};
 }
 
-message MemberListList {
-    repeated MemberList MemberLists = 1;
+message FilterList {
+    repeated Filter FilterList = 1;
 }
 
-message MemberList {
+message Filter {
     string Name = 1;
     string Description = 2;
 }

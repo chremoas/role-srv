@@ -6,14 +6,14 @@ Package chremoas_roles is a generated protocol buffer package.
 
 It is generated from these files:
 	common.proto
-	memberLists.proto
+	filters.proto
 	roles.proto
 	rules.proto
 
 It has these top-level messages:
 	NilMessage
-	MemberListList
-	MemberList
+	FilterList
+	Filter
 	MemberInfo
 	MemberInfoList
 	Role
@@ -22,7 +22,7 @@ It has these top-level messages:
 	SyncRoles
 	SyncRolesResponse
 	Rule
-	RemoveRuleRequest
+	RuleInfo
 	RulesList
 */
 package chremoas_roles

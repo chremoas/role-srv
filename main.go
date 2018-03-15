@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/chremoas/role-srv/handler"
-	"github.com/chremoas/role-srv/proto"
+	rolesrv "github.com/chremoas/role-srv/proto"
 	"github.com/chremoas/services-common/config"
 	"github.com/micro/go-micro"
 )
@@ -21,6 +21,7 @@ func main() {
 }
 
 func initialize(config *config.Configuration) error {
-	chremoas_role.RegisterRolesHandler(service.Server(), handler.NewRolesHandler(config, service))
+	rolesrv.RegisterRolesHandler(service.Server(), handler.NewRolesHandler(config, service))
+	rolesrv.RegisterRulesHandler(service.Server(), handler.NewRulesHandler(config))
 	return nil
 }

@@ -6,20 +6,19 @@ import "common.proto";
 
 service Rules {
     rpc AddRule (Rule) returns (NilMessage) {};
-    rpc UpdateRule (Rule) returns (NilMessage) {};
-    rpc RemoveRule (RemoveRuleRequest) returns (NilMessage) {};
+    rpc RemoveRule (Rule) returns (NilMessage) {};
     rpc GetRules (NilMessage) returns (RulesList) {};
+    rpc GetRule (Rule) returns (Rule) {};
 }
 
 message Rule {
     string Name = 1;
-    string Role = 2;
-    string filterA = 3;
-    string filterB = 4;
+    RuleInfo Rule = 2;
 }
-
-message RemoveRuleRequest {
-    string Name = 1;
+message RuleInfo {
+    string Role = 1;
+    string FilterA = 2;
+    string FilterB = 3;
 }
 
 message RulesList {
