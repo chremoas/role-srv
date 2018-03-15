@@ -63,7 +63,7 @@ func (h *rulesHandler) AddRule(ctx context.Context, request *rolesrv.Rule, respo
 		return err
 	}
 
-	if exists == 0 {
+	if exists == 0 && request.Rule.FilterA != "wildcard" {
 		return fmt.Errorf("FilterA `%s` doesn't exists.", request.Rule.FilterA)
 	}
 
@@ -74,7 +74,7 @@ func (h *rulesHandler) AddRule(ctx context.Context, request *rolesrv.Rule, respo
 		return err
 	}
 
-	if exists == 0 {
+	if exists == 0 && request.Rule.FilterB != "wildcard" {
 		return fmt.Errorf("FilterB `%s` doesn't exists.", request.Rule.FilterB)
 	}
 
@@ -123,12 +123,7 @@ func (h *rulesHandler) GetRules(ctx context.Context, request *rolesrv.NilMessage
 	}
 
 	for rule := range rules {
-		if err != nil {
-			return err
-		}
-
 		ruleName := strings.Split(rules[rule], ":")
-
 		response.Rules = append(response.Rules, &rolesrv.Rule{Name: ruleName[len(ruleName)-1]})
 	}
 

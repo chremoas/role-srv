@@ -17,7 +17,7 @@ It has these top-level messages:
 	MemberInfo
 	MemberInfoList
 	Role
-	RemoveRoleRequest
+	UpdateInfo
 	GetRolesResponse
 	SyncRoles
 	SyncRolesResponse

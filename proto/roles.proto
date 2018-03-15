@@ -6,8 +6,8 @@ import "common.proto";
 
 service Roles {
     rpc AddRole (Role) returns (NilMessage) {};
-    rpc UpdateRole (Role) returns (NilMessage) {};
-    rpc RemoveRole (RemoveRoleRequest) returns (NilMessage) {};
+    rpc UpdateRole (UpdateInfo) returns (NilMessage) {};
+    rpc RemoveRole (Role) returns (NilMessage) {};
     rpc GetRoles (NilMessage) returns (GetRolesResponse) {};
     rpc SyncRoles (NilMessage) returns (SyncRolesResponse) {};
 }
@@ -26,8 +26,10 @@ message Role {
     bool Mentionable = 9;
 }
 
-message RemoveRoleRequest {
+message UpdateInfo {
     string Name = 1;
+    string Key = 2;
+    string Value = 3;
 }
 
 message GetRolesResponse {
