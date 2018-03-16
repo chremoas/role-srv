@@ -58,40 +58,40 @@ func (m *Filter) GetDescription() string {
 	return ""
 }
 
-type MemberInfo struct {
-	Name string `protobuf:"bytes,1,opt,name=Name" json:"Name,omitempty"`
-	List string `protobuf:"bytes,2,opt,name=List" json:"List,omitempty"`
+type Members struct {
+	Name   []string `protobuf:"bytes,1,rep,name=Name" json:"Name,omitempty"`
+	Filter string   `protobuf:"bytes,2,opt,name=Filter" json:"Filter,omitempty"`
 }
 
-func (m *MemberInfo) Reset()                    { *m = MemberInfo{} }
-func (m *MemberInfo) String() string            { return proto.CompactTextString(m) }
-func (*MemberInfo) ProtoMessage()               {}
-func (*MemberInfo) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{2} }
+func (m *Members) Reset()                    { *m = Members{} }
+func (m *Members) String() string            { return proto.CompactTextString(m) }
+func (*Members) ProtoMessage()               {}
+func (*Members) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{2} }
 
-func (m *MemberInfo) GetName() string {
+func (m *Members) GetName() []string {
 	if m != nil {
 		return m.Name
 	}
-	return ""
+	return nil
 }
 
-func (m *MemberInfo) GetList() string {
+func (m *Members) GetFilter() string {
 	if m != nil {
-		return m.List
+		return m.Filter
 	}
 	return ""
 }
 
-type MemberInfoList struct {
-	Members []*MemberInfo `protobuf:"bytes,1,rep,name=Members" json:"Members,omitempty"`
+type MemberList struct {
+	Members []string `protobuf:"bytes,1,rep,name=Members" json:"Members,omitempty"`
 }
 
-func (m *MemberInfoList) Reset()                    { *m = MemberInfoList{} }
-func (m *MemberInfoList) String() string            { return proto.CompactTextString(m) }
-func (*MemberInfoList) ProtoMessage()               {}
-func (*MemberInfoList) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{3} }
+func (m *MemberList) Reset()                    { *m = MemberList{} }
+func (m *MemberList) String() string            { return proto.CompactTextString(m) }
+func (*MemberList) ProtoMessage()               {}
+func (*MemberList) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{3} }
 
-func (m *MemberInfoList) GetMembers() []*MemberInfo {
+func (m *MemberList) GetMembers() []string {
 	if m != nil {
 		return m.Members
 	}
@@ -101,8 +101,8 @@ func (m *MemberInfoList) GetMembers() []*MemberInfo {
 func init() {
 	proto.RegisterType((*FilterList)(nil), "chremoas.roles.FilterList")
 	proto.RegisterType((*Filter)(nil), "chremoas.roles.Filter")
-	proto.RegisterType((*MemberInfo)(nil), "chremoas.roles.MemberInfo")
-	proto.RegisterType((*MemberInfoList)(nil), "chremoas.roles.MemberInfoList")
+	proto.RegisterType((*Members)(nil), "chremoas.roles.Members")
+	proto.RegisterType((*MemberList)(nil), "chremoas.roles.MemberList")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -113,12 +113,12 @@ var _ server.Option
 // Client API for Filters service
 
 type FiltersClient interface {
-	GetLists(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*FilterList, error)
-	AddList(ctx context.Context, in *FilterList, opts ...client.CallOption) (*NilMessage, error)
-	RemoveList(ctx context.Context, in *FilterList, opts ...client.CallOption) (*NilMessage, error)
-	GetMembers(ctx context.Context, in *FilterList, opts ...client.CallOption) (*MemberInfoList, error)
-	AddMember(ctx context.Context, in *MemberInfo, opts ...client.CallOption) (*NilMessage, error)
-	RemoveMember(ctx context.Context, in *MemberInfo, opts ...client.CallOption) (*NilMessage, error)
+	GetFilters(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*FilterList, error)
+	AddFilter(ctx context.Context, in *Filter, opts ...client.CallOption) (*NilMessage, error)
+	RemoveFilter(ctx context.Context, in *Filter, opts ...client.CallOption) (*NilMessage, error)
+	GetMembers(ctx context.Context, in *Filter, opts ...client.CallOption) (*MemberList, error)
+	AddMembers(ctx context.Context, in *Members, opts ...client.CallOption) (*NilMessage, error)
+	RemoveMembers(ctx context.Context, in *Members, opts ...client.CallOption) (*NilMessage, error)
 }
 
 type filtersClient struct {
@@ -139,8 +139,8 @@ func NewFiltersClient(serviceName string, c client.Client) FiltersClient {
 	}
 }
 
-func (c *filtersClient) GetLists(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*FilterList, error) {
-	req := c.c.NewRequest(c.serviceName, "Filters.GetLists", in)
+func (c *filtersClient) GetFilters(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*FilterList, error) {
+	req := c.c.NewRequest(c.serviceName, "Filters.GetFilters", in)
 	out := new(FilterList)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -149,8 +149,8 @@ func (c *filtersClient) GetLists(ctx context.Context, in *NilMessage, opts ...cl
 	return out, nil
 }
 
-func (c *filtersClient) AddList(ctx context.Context, in *FilterList, opts ...client.CallOption) (*NilMessage, error) {
-	req := c.c.NewRequest(c.serviceName, "Filters.AddList", in)
+func (c *filtersClient) AddFilter(ctx context.Context, in *Filter, opts ...client.CallOption) (*NilMessage, error) {
+	req := c.c.NewRequest(c.serviceName, "Filters.AddFilter", in)
 	out := new(NilMessage)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -159,8 +159,8 @@ func (c *filtersClient) AddList(ctx context.Context, in *FilterList, opts ...cli
 	return out, nil
 }
 
-func (c *filtersClient) RemoveList(ctx context.Context, in *FilterList, opts ...client.CallOption) (*NilMessage, error) {
-	req := c.c.NewRequest(c.serviceName, "Filters.RemoveList", in)
+func (c *filtersClient) RemoveFilter(ctx context.Context, in *Filter, opts ...client.CallOption) (*NilMessage, error) {
+	req := c.c.NewRequest(c.serviceName, "Filters.RemoveFilter", in)
 	out := new(NilMessage)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -169,9 +169,9 @@ func (c *filtersClient) RemoveList(ctx context.Context, in *FilterList, opts ...
 	return out, nil
 }
 
-func (c *filtersClient) GetMembers(ctx context.Context, in *FilterList, opts ...client.CallOption) (*MemberInfoList, error) {
+func (c *filtersClient) GetMembers(ctx context.Context, in *Filter, opts ...client.CallOption) (*MemberList, error) {
 	req := c.c.NewRequest(c.serviceName, "Filters.GetMembers", in)
-	out := new(MemberInfoList)
+	out := new(MemberList)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -179,8 +179,8 @@ func (c *filtersClient) GetMembers(ctx context.Context, in *FilterList, opts ...
 	return out, nil
 }
 
-func (c *filtersClient) AddMember(ctx context.Context, in *MemberInfo, opts ...client.CallOption) (*NilMessage, error) {
-	req := c.c.NewRequest(c.serviceName, "Filters.AddMember", in)
+func (c *filtersClient) AddMembers(ctx context.Context, in *Members, opts ...client.CallOption) (*NilMessage, error) {
+	req := c.c.NewRequest(c.serviceName, "Filters.AddMembers", in)
 	out := new(NilMessage)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -189,8 +189,8 @@ func (c *filtersClient) AddMember(ctx context.Context, in *MemberInfo, opts ...c
 	return out, nil
 }
 
-func (c *filtersClient) RemoveMember(ctx context.Context, in *MemberInfo, opts ...client.CallOption) (*NilMessage, error) {
-	req := c.c.NewRequest(c.serviceName, "Filters.RemoveMember", in)
+func (c *filtersClient) RemoveMembers(ctx context.Context, in *Members, opts ...client.CallOption) (*NilMessage, error) {
+	req := c.c.NewRequest(c.serviceName, "Filters.RemoveMembers", in)
 	out := new(NilMessage)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -202,12 +202,12 @@ func (c *filtersClient) RemoveMember(ctx context.Context, in *MemberInfo, opts .
 // Server API for Filters service
 
 type FiltersHandler interface {
-	GetLists(context.Context, *NilMessage, *FilterList) error
-	AddList(context.Context, *FilterList, *NilMessage) error
-	RemoveList(context.Context, *FilterList, *NilMessage) error
-	GetMembers(context.Context, *FilterList, *MemberInfoList) error
-	AddMember(context.Context, *MemberInfo, *NilMessage) error
-	RemoveMember(context.Context, *MemberInfo, *NilMessage) error
+	GetFilters(context.Context, *NilMessage, *FilterList) error
+	AddFilter(context.Context, *Filter, *NilMessage) error
+	RemoveFilter(context.Context, *Filter, *NilMessage) error
+	GetMembers(context.Context, *Filter, *MemberList) error
+	AddMembers(context.Context, *Members, *NilMessage) error
+	RemoveMembers(context.Context, *Members, *NilMessage) error
 }
 
 func RegisterFiltersHandler(s server.Server, hdlr FiltersHandler, opts ...server.HandlerOption) {
@@ -218,51 +218,50 @@ type Filters struct {
 	FiltersHandler
 }
 
-func (h *Filters) GetLists(ctx context.Context, in *NilMessage, out *FilterList) error {
-	return h.FiltersHandler.GetLists(ctx, in, out)
+func (h *Filters) GetFilters(ctx context.Context, in *NilMessage, out *FilterList) error {
+	return h.FiltersHandler.GetFilters(ctx, in, out)
 }
 
-func (h *Filters) AddList(ctx context.Context, in *FilterList, out *NilMessage) error {
-	return h.FiltersHandler.AddList(ctx, in, out)
+func (h *Filters) AddFilter(ctx context.Context, in *Filter, out *NilMessage) error {
+	return h.FiltersHandler.AddFilter(ctx, in, out)
 }
 
-func (h *Filters) RemoveList(ctx context.Context, in *FilterList, out *NilMessage) error {
-	return h.FiltersHandler.RemoveList(ctx, in, out)
+func (h *Filters) RemoveFilter(ctx context.Context, in *Filter, out *NilMessage) error {
+	return h.FiltersHandler.RemoveFilter(ctx, in, out)
 }
 
-func (h *Filters) GetMembers(ctx context.Context, in *FilterList, out *MemberInfoList) error {
+func (h *Filters) GetMembers(ctx context.Context, in *Filter, out *MemberList) error {
 	return h.FiltersHandler.GetMembers(ctx, in, out)
 }
 
-func (h *Filters) AddMember(ctx context.Context, in *MemberInfo, out *NilMessage) error {
-	return h.FiltersHandler.AddMember(ctx, in, out)
+func (h *Filters) AddMembers(ctx context.Context, in *Members, out *NilMessage) error {
+	return h.FiltersHandler.AddMembers(ctx, in, out)
 }
 
-func (h *Filters) RemoveMember(ctx context.Context, in *MemberInfo, out *NilMessage) error {
-	return h.FiltersHandler.RemoveMember(ctx, in, out)
+func (h *Filters) RemoveMembers(ctx context.Context, in *Members, out *NilMessage) error {
+	return h.FiltersHandler.RemoveMembers(ctx, in, out)
 }
 
 func init() { proto.RegisterFile("filters.proto", fileDescriptor1) }
 
 var fileDescriptor1 = []byte{
-	// 293 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x92, 0xc1, 0x4e, 0xc2, 0x40,
-	0x10, 0x86, 0xa9, 0x10, 0x2a, 0x03, 0x72, 0x98, 0x83, 0x69, 0x7a, 0x30, 0x4d, 0x4f, 0x9c, 0x7a,
-	0x40, 0xe2, 0xd1, 0x84, 0x58, 0x8b, 0x1a, 0xe1, 0xd0, 0x37, 0x28, 0xed, 0xa0, 0x4d, 0xba, 0x5d,
-	0xb2, 0xb3, 0xf1, 0xdd, 0x7c, 0x3b, 0xe3, 0x6e, 0x0d, 0x55, 0xb1, 0x1e, 0xb8, 0xed, 0xcc, 0xfc,
-	0xff, 0xdf, 0x6f, 0x26, 0x85, 0x8b, 0x5d, 0x59, 0x69, 0x52, 0x1c, 0xed, 0x95, 0xd4, 0x12, 0xa7,
-	0xf9, 0xab, 0x22, 0x21, 0x33, 0x8e, 0x94, 0xac, 0x88, 0xfd, 0x49, 0x2e, 0x85, 0x90, 0xb5, 0x9d,
-	0x86, 0x31, 0x40, 0x62, 0xe4, 0xcf, 0x25, 0x6b, 0xbc, 0x69, 0x57, 0x9e, 0x13, 0xf4, 0x67, 0xe3,
-	0xf9, 0x65, 0xf4, 0x3d, 0x20, 0xb2, 0x8a, 0xb4, 0xa5, 0x0c, 0x6f, 0x61, 0x68, 0x2b, 0x44, 0x18,
-	0x6c, 0x32, 0x41, 0x9e, 0x13, 0x38, 0xb3, 0x51, 0x6a, 0xde, 0x18, 0xc0, 0x38, 0x26, 0xce, 0x55,
-	0xb9, 0xd7, 0xa5, 0xac, 0xbd, 0x33, 0x33, 0x6a, 0xb7, 0xc2, 0x05, 0xc0, 0x9a, 0xc4, 0x96, 0xd4,
-	0x63, 0xbd, 0x93, 0x47, 0x33, 0x10, 0x06, 0x86, 0xc9, 0x9a, 0xcd, 0x3b, 0x4c, 0x60, 0x7a, 0x70,
-	0x19, 0xfe, 0x05, 0xb8, 0xb6, 0xc3, 0x0d, 0xbc, 0xff, 0x13, 0xfe, 0x60, 0x48, 0xbf, 0xa4, 0xf3,
-	0xf7, 0x3e, 0xb8, 0x16, 0x9f, 0x31, 0x86, 0xf3, 0x15, 0xe9, 0xcf, 0x30, 0xc6, 0x5f, 0xe6, 0x4d,
-	0x59, 0xad, 0x89, 0x39, 0x7b, 0x21, 0xdf, 0x3f, 0x7e, 0x15, 0xc3, 0xd5, 0xc3, 0x3b, 0x70, 0x97,
-	0x45, 0x61, 0x90, 0x3a, 0x84, 0x7e, 0xc7, 0x07, 0xc2, 0x1e, 0x26, 0x00, 0x29, 0x09, 0xf9, 0x46,
-	0x27, 0xe6, 0x3c, 0x01, 0xac, 0x48, 0x37, 0xcb, 0x76, 0xe6, 0x5c, 0xfd, 0x7d, 0xad, 0x66, 0xb1,
-	0x7b, 0x18, 0x2d, 0x8b, 0xc2, 0xb6, 0xb1, 0xe3, 0xb8, 0xff, 0x20, 0x3d, 0xc0, 0xc4, 0xae, 0x76,
-	0x6a, 0xd2, 0x76, 0x68, 0x7e, 0xe3, 0xeb, 0x8f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x70, 0x77, 0x6d,
-	0x94, 0xf5, 0x02, 0x00, 0x00,
+	// 281 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x92, 0x3f, 0x4f, 0xc3, 0x30,
+	0x10, 0xc5, 0x13, 0x82, 0x5a, 0xf5, 0xda, 0x32, 0x78, 0x28, 0x51, 0xa6, 0xc8, 0x03, 0xea, 0x94,
+	0xa1, 0x08, 0x46, 0xa4, 0x40, 0x14, 0x16, 0xda, 0x21, 0xdf, 0x20, 0x4d, 0x0e, 0xb0, 0x14, 0xd7,
+	0x95, 0xcf, 0xe2, 0x4b, 0xf1, 0x25, 0x91, 0xec, 0xb8, 0x04, 0x54, 0xfe, 0x48, 0xdd, 0xf2, 0x72,
+	0xef, 0xfd, 0x74, 0xef, 0x64, 0x98, 0x3f, 0x8b, 0xce, 0xa0, 0xa6, 0x6c, 0xaf, 0x95, 0x51, 0xec,
+	0xa2, 0x79, 0xd5, 0x28, 0x55, 0x4d, 0x99, 0x56, 0x1d, 0x52, 0x32, 0x6b, 0x94, 0x94, 0x6a, 0xe7,
+	0xa6, 0xbc, 0x00, 0x28, 0xad, 0xfd, 0x49, 0x90, 0x61, 0xb7, 0x43, 0x15, 0x87, 0x69, 0xb4, 0x9c,
+	0xae, 0x16, 0xd9, 0x57, 0x40, 0xe6, 0x1c, 0xd5, 0xc0, 0xc9, 0xef, 0x60, 0xe4, 0x14, 0x63, 0x70,
+	0xbe, 0xa9, 0x25, 0xc6, 0x61, 0x1a, 0x2e, 0x27, 0x95, 0xfd, 0x66, 0x29, 0x4c, 0x0b, 0xa4, 0x46,
+	0x8b, 0xbd, 0x11, 0x6a, 0x17, 0x9f, 0xd9, 0xd1, 0xf0, 0x17, 0xbf, 0x81, 0xf1, 0x1a, 0xe5, 0x16,
+	0x35, 0x0d, 0x00, 0xd1, 0x01, 0xb0, 0xf0, 0xf8, 0x3e, 0xdb, 0x2b, 0x7e, 0x05, 0xe0, 0x62, 0x76,
+	0xf9, 0xf8, 0x00, 0xe9, 0xc3, 0x5e, 0xae, 0xde, 0x23, 0x18, 0xbb, 0x08, 0xb1, 0x12, 0xe0, 0x11,
+	0x8d, 0x57, 0xc9, 0xf7, 0x72, 0x1b, 0xd1, 0xad, 0x91, 0xa8, 0x7e, 0xc1, 0x24, 0x39, 0x5e, 0xdc,
+	0x16, 0x0e, 0x58, 0x0e, 0x93, 0xbc, 0x6d, 0xfb, 0xd6, 0x3f, 0xdc, 0x28, 0xf9, 0x05, 0xcf, 0x03,
+	0x56, 0xc0, 0xac, 0x42, 0xa9, 0xde, 0xf0, 0x24, 0xca, 0xbd, 0x2d, 0xe4, 0xcf, 0xf7, 0x6f, 0xc6,
+	0xe7, 0xe1, 0x78, 0xc0, 0x1e, 0x00, 0xf2, 0xb6, 0xf5, 0x8c, 0xcb, 0xe3, 0x5e, 0xfa, 0x63, 0x91,
+	0x12, 0xe6, 0xae, 0xce, 0x69, 0x9c, 0xed, 0xc8, 0xbe, 0xcc, 0xeb, 0x8f, 0x00, 0x00, 0x00, 0xff,
+	0xff, 0xb9, 0xcf, 0x35, 0x82, 0xc8, 0x02, 0x00, 0x00,
 }

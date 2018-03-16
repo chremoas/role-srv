@@ -9,7 +9,14 @@ service Roles {
     rpc UpdateRole (UpdateInfo) returns (NilMessage) {};
     rpc RemoveRole (Role) returns (NilMessage) {};
     rpc GetRoles (NilMessage) returns (GetRolesResponse) {};
+    rpc GetRole (Role) returns (Role) {};
     rpc SyncRoles (NilMessage) returns (SyncRolesResponse) {};
+    rpc GetRoleKeys (NilMessage) returns (StringList) {};
+    rpc GetRoleTypes (NilMessage) returns (StringList) {};
+}
+
+message StringList {
+    repeated string Value = 1;
 }
 
 message Role {

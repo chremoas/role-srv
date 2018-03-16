@@ -14,8 +14,9 @@ It has these top-level messages:
 	NilMessage
 	FilterList
 	Filter
-	MemberInfo
-	MemberInfoList
+	Members
+	MemberList
+	StringList
 	Role
 	UpdateInfo
 	GetRolesResponse

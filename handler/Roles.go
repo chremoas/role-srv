@@ -12,8 +12,8 @@ import (
 	"golang.org/x/net/context"
 	//"regexp"
 	"github.com/fatih/structs"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type rolesHandler struct {
@@ -26,6 +26,8 @@ type clientList struct {
 }
 
 var clients clientList
+var roleKeys = []string{"Name", "Color", "Hoist", "Position", "Permissions", "Managed", "Mentionable"}
+var roleTypes = []string{"internal", "discord"}
 
 func NewRolesHandler(config *config.Configuration, service micro.Service) rolesrv.RolesHandler {
 	c := service.Client()
@@ -45,6 +47,16 @@ func NewRolesHandler(config *config.Configuration, service micro.Service) rolesr
 	return &rolesHandler{Redis: redisClient}
 }
 
+func (h *rolesHandler) GetRoleKeys(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.StringList) error {
+	response.Value = roleKeys
+	return nil
+}
+
+func (h *rolesHandler) GetRoleTypes(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.StringList) error {
+	response.Value = roleTypes
+	return nil
+}
+
 func (h *rolesHandler) AddRole(ctx context.Context, request *rolesrv.Role, response *rolesrv.NilMessage) error {
 	roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", request.ShortName))
 
@@ -55,6 +67,14 @@ func (h *rolesHandler) AddRole(ctx context.Context, request *rolesrv.Role, respo
 
 	if len(request.ShortName) == 0 {
 		return errors.New("ShortName is required.")
+	}
+
+	if len(request.Name) == 0 {
+		return errors.New("Name is required.")
+	}
+
+	if !validListItem(request.Type, roleTypes) {
+		return fmt.Errorf("`%s` isn't a valid Role Type.", request.Type)
 	}
 
 	exists, err := h.Redis.Client.Exists(roleName).Result()
@@ -91,7 +111,7 @@ func (h *rolesHandler) UpdateRole(ctx context.Context, request *rolesrv.UpdateIn
 		return fmt.Errorf("Role `%s` doesn't exists.", request.Name)
 	}
 
-	if !validRoleKey(request.Key) {
+	if !validListItem(request.Key, roleKeys) {
 		return fmt.Errorf("`%s` isn't a valid Role Key.", request.Key)
 	}
 
@@ -100,8 +120,7 @@ func (h *rolesHandler) UpdateRole(ctx context.Context, request *rolesrv.UpdateIn
 	return nil
 }
 
-func validRoleKey(a string) bool {
-	list := []string{"Name", "Color", "Hoist", "Position", "Permissions", "Managed", "Mentionable"}
+func validListItem(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
 			return true
@@ -111,7 +130,7 @@ func validRoleKey(a string) bool {
 }
 
 func (h *rolesHandler) RemoveRole(ctx context.Context, request *rolesrv.Role, response *rolesrv.NilMessage) error {
-	roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", request.Name))
+	roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", request.ShortName))
 
 	exists, err := h.Redis.Client.Exists(roleName).Result()
 
@@ -120,7 +139,7 @@ func (h *rolesHandler) RemoveRole(ctx context.Context, request *rolesrv.Role, re
 	}
 
 	if exists == 0 {
-		return fmt.Errorf("Role `%s` doesn't exists.", request.Name)
+		return fmt.Errorf("Role `%s` doesn't exists.", request.ShortName)
 	}
 
 	_, err = h.Redis.Client.Del(roleName).Result()
