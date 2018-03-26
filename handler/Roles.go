@@ -7,6 +7,7 @@ import (
 	rolesrv "github.com/chremoas/role-srv/proto"
 	"github.com/chremoas/services-common/config"
 	redis "github.com/chremoas/services-common/redis"
+	"github.com/chremoas/services-common/sets"
 	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/client"
 	"golang.org/x/net/context"
@@ -153,17 +154,33 @@ func (h *rolesHandler) RemoveRole(ctx context.Context, request *rolesrv.Role, re
 }
 
 func (h *rolesHandler) GetRoles(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.GetRolesResponse) error {
-	roles, err := h.Redis.Client.Keys(h.Redis.KeyName("role:*")).Result()
+	roles, err := h.getRoles()
 
 	if err != nil {
 		return err
 	}
 
 	for role := range roles {
-		roleName := strings.Split(roles[role], ":")
-		response.Roles = append(response.Roles, &rolesrv.Role{Name: roleName[len(roleName)-1]})
+		response.Roles = append(response.Roles, &rolesrv.Role{Name: roles[role]})
 	}
+
 	return nil
+}
+
+func (h *rolesHandler) getRoles() ([]string, error) {
+	var roleList []string
+	roles, err := h.Redis.Client.Keys(h.Redis.KeyName("role:*")).Result()
+
+	if err != nil {
+		return nil, err
+	}
+
+	for role := range roles {
+		roleName := strings.Split(roles[role], ":")
+		roleList = append(roleList, roleName[len(roleName)-1])
+	}
+
+	return roleList, nil
 }
 
 func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, response *rolesrv.Role) error {
@@ -195,53 +212,86 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 	return nil
 }
 
-func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.SyncRolesResponse) error {
-	//var matchSpace = regexp.MustCompile(`\s`)
-	//var matchDBError = regexp.MustCompile(`^Error 1062:`)
-	//var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
-	//
-	////listDRoles(ctx, req)
-	//discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
-	//
-	//if err != nil {
-	//	return err
-	//}
-	//
-	////listRoles(ctx, req)
-	//chremoasRoles, err := clients.chremoasQuery.GetRoles(ctx, &uauthsvc.EntityQueryRequest{})
-	//
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//for dr := range discordRoles.Roles {
-	//	_, err := clients.chremoasAdmin.RoleUpdate(ctx, &uauthsvc.RoleAdminRequest{
-	//		Role:      &uauthsvc.Role{ChatServiceGroup: discordRoles.Roles[dr].Name, RoleName: matchSpace.ReplaceAllString(discordRoles.Roles[dr].Name, "_")},
-	//		Operation: uauthsvc.EntityOperation_ADD_OR_UPDATE,
-	//	})
-	//
-	//	if err != nil {
-	//		if !matchDBError.MatchString(err.Error()) {
-	//			return err
-	//		}
-	//		fmt.Printf("dr err: %+v\n", err)
-	//	} else {
-	//		response.Roles = append(response.Roles, &rolesrv.SyncRoles{Source: "Discord", Destination: "Chremoas", Name: discordRoles.Roles[dr].Name})
-	//	}
-	//}
-	//
-	//for cr := range chremoasRoles.List {
-	//	_, err := clients.discord.CreateRole(ctx, &discord.CreateRoleRequest{Name: chremoasRoles.List[cr].ChatServiceGroup})
-	//
-	//	if err != nil {
-	//		if !matchDiscordError.MatchString(err.Error()) {
-	//			return err
-	//		}
-	//		fmt.Printf("cr err: %+v\n", err)
-	//	} else {
-	//		response.Roles = append(response.Roles, &rolesrv.SyncRoles{Source: "Chremoas", Destination: "Discord", Name: chremoasRoles.List[cr].ChatServiceGroup})
-	//	}
-	//}
+func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.SyncRolesResponse) error {
+	roles, err := h.getRoles()
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%+v\n", roles)
+
+	members, err := clients.discord.GetAllMembers(ctx, &discord.GetAllMembersRequest{NumberPerPage: 100})
+
+	if err != nil {
+		return err
+	}
+
+	for role := range roles {
+		roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", roles[role]))
+		cRole, err := h.Redis.Client.HGetAll(roleName).Result()
+
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("cRole.Name: %s, cRole.ShortName: %s\n", cRole["Name"], cRole["ShortName"])
+	}
+
+	if err != nil {
+		return err
+	}
+
+	for member := range members.Members {
+		fmt.Printf("Member: %+v\n", members.Members[member])
+		for role := range members.Members[member].Roles {
+			fmt.Printf("\tRole.Name: %+v\n", members.Members[member].Roles[role].Name)
+		}
+	}
 
 	return nil
 }
+
+func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.SyncRolesResponse) error {
+	chremoasRoleSet := sets.NewStringSet()
+	discordRoleSet := sets.NewStringSet()
+
+	//var matchSpace = regexp.MustCompile(`\s`)
+	//var matchDBError = regexp.MustCompile(`^Error 1062:`)
+	//var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
+
+	chremoasRoles, err := h.getRoles()
+	if err != nil {
+		return err
+	}
+
+	for role := range chremoasRoles {
+		roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", chremoasRoles[role]))
+		c, err := h.Redis.Client.HGetAll(roleName).Result()
+
+		if err != nil {
+			return err
+		}
+
+		chremoasRoleSet.Add(c["Name"])
+		//cRole = append(cRole, c)
+	}
+
+	discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
+	if err != nil {
+		return err
+	}
+
+	for role := range discordRoles.Roles {
+		discordRoleSet.Add(discordRoles.Roles[role].Name)
+	}
+
+	fmt.Printf("chremoasRoleSet: %+v\n", chremoasRoleSet)
+	fmt.Printf("discordRoleSet: %+v\n", discordRoleSet)
+
+	return nil
+}
+
+//func syncRole(roleName string) error {
+//	return nil
+//}
