@@ -288,6 +288,7 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessag
 
 	fmt.Printf("chremoasRoleSet: %+v\n", chremoasRoleSet)
 	fmt.Printf("discordRoleSet: %+v\n", discordRoleSet)
+	fmt.Printf("Add: %+v\n", )
 
 	return nil
 }
