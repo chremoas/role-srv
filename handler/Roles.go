@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"strings"
 	"fmt"
 	discord "github.com/chremoas/discord-gateway/proto"
 	rolesrv "github.com/chremoas/role-srv/proto"
@@ -14,7 +15,7 @@ import (
 	//"regexp"
 	"github.com/fatih/structs"
 	"strconv"
-	"strings"
+	"regexp"
 )
 
 type rolesHandler struct {
@@ -258,7 +259,7 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessag
 
 	//var matchSpace = regexp.MustCompile(`\s`)
 	//var matchDBError = regexp.MustCompile(`^Error 1062:`)
-	//var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
+	var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
 
 	chremoasRoles, err := h.getRoles()
 	if err != nil {
@@ -274,7 +275,6 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessag
 		}
 
 		chremoasRoleSet.Add(c["Name"])
-		//cRole = append(cRole, c)
 	}
 
 	discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
@@ -282,13 +282,43 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessag
 		return err
 	}
 
+	ignoreSet := sets.NewStringSet()
+	ignoreSet.Add("Chremoas")
+	ignoreSet.Add("@everyone")
+
 	for role := range discordRoles.Roles {
-		discordRoleSet.Add(discordRoles.Roles[role].Name)
+		if !ignoreSet.Contains(discordRoles.Roles[role].Name) {
+			discordRoleSet.Add(discordRoles.Roles[role].Name)
+		}
 	}
 
-	fmt.Printf("chremoasRoleSet: %+v\n", chremoasRoleSet)
-	fmt.Printf("discordRoleSet: %+v\n", discordRoleSet)
-	fmt.Printf("Add: %+v\n", )
+	toAdd := chremoasRoleSet.Difference(discordRoleSet)
+	toDelete := discordRoleSet.Difference(chremoasRoleSet)
+
+	for r := range toAdd.Set {
+		_, err := clients.discord.CreateRole(ctx, &discord.CreateRoleRequest{Name: r})
+
+		if err != nil {
+			if matchDiscordError.MatchString(err.Error()) {
+				// The role list was cached most likely so we'll pretend we didn't try
+				// to create it just now. -brian
+				continue
+			} else {
+				return err
+			}
+		}
+
+		response.AddedRoles = append(response.AddedRoles, r)
+	}
+
+	for r := range toDelete.Set {
+		response.RemovedRoles = append(response.RemovedRoles, r)
+		_, err := clients.discord.DeleteRole(ctx, &discord.DeleteRoleRequest{Name: r})
+
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

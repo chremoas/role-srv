@@ -43,12 +43,7 @@ message GetRolesResponse {
     repeated Role Roles = 1;
 }
 
-message SyncRoles {
-    string Source = 1;
-    string Destination = 2;
-    string Name = 3;
-}
-
 message SyncRolesResponse {
-    repeated SyncRoles Roles = 1;
+    repeated string AddedRoles = 1;
+    repeated string RemovedRoles = 2;
 }
