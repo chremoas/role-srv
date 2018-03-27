@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"strings"
 	"fmt"
 	discord "github.com/chremoas/discord-gateway/proto"
 	rolesrv "github.com/chremoas/role-srv/proto"
@@ -12,10 +11,11 @@ import (
 	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/client"
 	"golang.org/x/net/context"
+	"strings"
 	//"regexp"
 	"github.com/fatih/structs"
-	"strconv"
 	"regexp"
+	"strconv"
 )
 
 type rolesHandler struct {
@@ -254,12 +254,9 @@ func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMess
 }
 
 func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.SyncRolesResponse) error {
+	var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
 	chremoasRoleSet := sets.NewStringSet()
 	discordRoleSet := sets.NewStringSet()
-
-	//var matchSpace = regexp.MustCompile(`\s`)
-	//var matchDBError = regexp.MustCompile(`^Error 1062:`)
-	var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
 
 	chremoasRoles, err := h.getRoles()
 	if err != nil {
@@ -322,7 +319,3 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessag
 
 	return nil
 }
-
-//func syncRole(roleName string) error {
-//	return nil
-//}
