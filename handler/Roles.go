@@ -213,7 +213,7 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 	return nil
 }
 
-func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.SyncRolesResponse) error {
+func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.SyncResponse) error {
 	roles, err := h.getRoles()
 
 	if err != nil {
@@ -253,7 +253,7 @@ func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMess
 	return nil
 }
 
-func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.SyncRolesResponse) error {
+func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.SyncResponse) error {
 	var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
 	chremoasRoleSet := sets.NewStringSet()
 	discordRoleSet := sets.NewStringSet()
@@ -305,11 +305,11 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessag
 			}
 		}
 
-		response.AddedRoles = append(response.AddedRoles, r)
+		response.Added = append(response.Added, r)
 	}
 
 	for r := range toDelete.Set {
-		response.RemovedRoles = append(response.RemovedRoles, r)
+		response.Removed = append(response.Removed, r)
 		_, err := clients.discord.DeleteRole(ctx, &discord.DeleteRoleRequest{Name: r})
 
 		if err != nil {

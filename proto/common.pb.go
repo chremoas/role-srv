@@ -20,7 +20,7 @@ It has these top-level messages:
 	Role
 	UpdateInfo
 	GetRolesResponse
-	SyncRolesResponse
+	SyncResponse
 	Rule
 	RuleInfo
 	RulesList
