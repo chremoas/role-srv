@@ -214,41 +214,77 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 }
 
 func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.SyncResponse) error {
-	roles, err := h.getRoles()
+	// Discord limit is 1000, should probably make this a config option. -brian
+	var numberPerPage int32 = 1000
+	//var memberSet = sets.NewStringSet()
+	var roleSet = make(map[string]*sets.StringSet)
+	//roles, err := h.getRoles()
 
-	if err != nil {
-		return err
-	}
+	//if err != nil {
+	//	return err
+	//}
 
-	fmt.Printf("%+v\n", roles)
+	//fmt.Printf("%+v\n", roles)
 
-	members, err := clients.discord.GetAllMembers(ctx, &discord.GetAllMembersRequest{NumberPerPage: 100})
+	var memberCount = 1
+	var memberId = ""
 
-	if err != nil {
-		return err
-	}
-
-	for role := range roles {
-		roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", roles[role]))
-		cRole, err := h.Redis.Client.HGetAll(roleName).Result()
+	for memberCount > 0 {
+		members, err := clients.discord.GetAllMembers(ctx, &discord.GetAllMembersRequest{NumberPerPage: numberPerPage, After: memberId})
 
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("cRole.Name: %s, cRole.ShortName: %s\n", cRole["Name"], cRole["ShortName"])
-	}
+		for m := range members.Members {
+			//memberSet.Add(members.Members[m].User.Id)
+			for r := range members.Members[m].Roles {
+				if _, ok := roleSet[members.Members[m].Roles[r].Name]; !ok {
+					roleSet[members.Members[m].Roles[r].Name] = sets.NewStringSet()
+				}
+				roleSet[members.Members[m].Roles[r].Name].Add(members.Members[m].User.Id)
+			}
 
-	if err != nil {
-		return err
-	}
-
-	for member := range members.Members {
-		fmt.Printf("Member: %+v\n", members.Members[member])
-		for role := range members.Members[member].Roles {
-			fmt.Printf("\tRole.Name: %+v\n", members.Members[member].Roles[role].Name)
+			if members.Members[m].User.Id > memberId {
+				memberId = members.Members[m].User.Id
+			}
 		}
+
+		memberCount = len(members.Members)
 	}
+
+	for r := range roleSet {
+		fmt.Printf("%s: %+v\n", r, roleSet[r])
+	}
+
+	//for m := range memberSet.Set {
+	//	member, err := clients.discord.GetUser(ctx, &discord.GetUserRequest{UserId: m})
+	//
+	//	if err != nil {
+	//		fmt.Println(err)
+	//	}
+	//
+	//	fmt.Println(m)
+	//	fmt.Println(member)
+	//}
+
+	//for role := range roles {
+	//	roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", roles[role]))
+	//	cRole, err := h.Redis.Client.HGetAll(roleName).Result()
+	//
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	fmt.Printf("cRole.Name: %s, cRole.ShortName: %s\n", cRole["Name"], cRole["ShortName"])
+	//}
+
+	//for member := range members.Members {
+	//	fmt.Printf("Member: %+v\n", members.Members[member])
+	//	for role := range members.Members[member].Roles {
+	//		fmt.Printf("\tRole.Name: %+v\n", members.Members[member].Roles[role].Name)
+	//	}
+	//}
 
 	return nil
 }
