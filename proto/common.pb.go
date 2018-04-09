@@ -8,7 +8,6 @@ It is generated from these files:
 	common.proto
 	filters.proto
 	roles.proto
-	rules.proto
 
 It has these top-level messages:
 	NilMessage
@@ -21,9 +20,6 @@ It has these top-level messages:
 	UpdateInfo
 	GetRolesResponse
 	SyncResponse
-	Rule
-	RuleInfo
-	RulesList
 */
 package chremoas_roles
 

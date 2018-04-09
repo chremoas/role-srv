@@ -61,8 +61,10 @@ func (h *rolesHandler) GetRoleTypes(ctx context.Context, request *rolesrv.NilMes
 
 func (h *rolesHandler) AddRole(ctx context.Context, request *rolesrv.Role, response *rolesrv.NilMessage) error {
 	roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", request.ShortName))
+	filterA := h.Redis.KeyName(fmt.Sprintf("filter:%s", request.FilterA))
+	filterB := h.Redis.KeyName(fmt.Sprintf("filter:%s", request.FilterB))
 
-	// Type and Name are required so let's check for those
+	// Type, Name and the filters are required so let's check for those
 	if len(request.Type) == 0 {
 		return errors.New("Type is required.")
 	}
@@ -73,6 +75,14 @@ func (h *rolesHandler) AddRole(ctx context.Context, request *rolesrv.Role, respo
 
 	if len(request.Name) == 0 {
 		return errors.New("Name is required.")
+	}
+
+	if len(request.FilterA) == 0 {
+		return errors.New("FilterA is required.")
+	}
+
+	if len(request.FilterB) == 0 {
+		return errors.New("FilterB is required.")
 	}
 
 	if !validListItem(request.Type, roleTypes) {
@@ -89,6 +99,28 @@ func (h *rolesHandler) AddRole(ctx context.Context, request *rolesrv.Role, respo
 		return fmt.Errorf("Role `%s` already exists.", request.Name)
 	}
 
+	// Check if filter A exists
+	exists, err = h.Redis.Client.Exists(filterA).Result()
+
+	if err != nil {
+		return err
+	}
+
+	if exists == 0 && request.FilterA != "wildcard" {
+		return fmt.Errorf("FilterA `%s` doesn't exists.", request.FilterA)
+	}
+
+	// Check if filter B exists
+	exists, err = h.Redis.Client.Exists(filterB).Result()
+
+	if err != nil {
+		return err
+	}
+
+	if exists == 0 && request.FilterB != "wildcard" {
+		return fmt.Errorf("FilterB `%s` doesn't exists.", request.FilterB)
+	}
+
 	_, err = h.Redis.Client.HMSet(roleName, structs.Map(request)).Result()
 
 	if err != nil {
@@ -101,6 +133,7 @@ func (h *rolesHandler) AddRole(ctx context.Context, request *rolesrv.Role, respo
 }
 
 func (h *rolesHandler) UpdateRole(ctx context.Context, request *rolesrv.UpdateInfo, response *rolesrv.NilMessage) error {
+	// Does this actually work? -brian
 	roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", request.Name))
 
 	exists, err := h.Redis.Client.Exists(roleName).Result()
@@ -202,6 +235,8 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 
 	response.ShortName = request.ShortName
 	response.Type = role["Type"]
+	response.FilterA = role["FilterA"]
+	response.FilterB = role["FilterB"]
 	response.Name = role["Name"]
 	response.Color = int32(color)
 	response.Hoist = hoist

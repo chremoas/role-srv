@@ -23,15 +23,17 @@ message StringList {
 message Role {
     string Type = 1;
     string ShortName = 2;
+    string FilterA = 3;
+    string FilterB = 4;
 
     // Discord
-    string Name = 3;
-    int32 Color = 4;
-    bool Hoist = 5;
-    int32 Position = 6;
-    int32 Permissions = 7;
-    bool Managed = 8;
-    bool Mentionable = 9;
+    string Name = 5;
+    int32 Color = 6;
+    bool Hoist = 7;
+    int32 Position = 8;
+    int32 Permissions = 9;
+    bool Managed = 10;
+    bool Mentionable = 11;
 }
 
 message UpdateInfo {
