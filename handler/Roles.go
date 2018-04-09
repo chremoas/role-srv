@@ -61,8 +61,8 @@ func (h *rolesHandler) GetRoleTypes(ctx context.Context, request *rolesrv.NilMes
 
 func (h *rolesHandler) AddRole(ctx context.Context, request *rolesrv.Role, response *rolesrv.NilMessage) error {
 	roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", request.ShortName))
-	filterA := h.Redis.KeyName(fmt.Sprintf("filter:%s", request.FilterA))
-	filterB := h.Redis.KeyName(fmt.Sprintf("filter:%s", request.FilterB))
+	filterA := h.Redis.KeyName(fmt.Sprintf("filter_description:%s", request.FilterA))
+	filterB := h.Redis.KeyName(fmt.Sprintf("filter_description:%s", request.FilterB))
 
 	// Type, Name and the filters are required so let's check for those
 	if len(request.Type) == 0 {
@@ -248,10 +248,10 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 	return nil
 }
 
-func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.SyncResponse) error {
+func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.MemberSyncResponse) error {
 	// Discord limit is 1000, should probably make this a config option. -brian
 	var numberPerPage int32 = 1000
-	var roleSet = make(map[string]*sets.StringSet)
+	var discordRoleSet = make(map[string]*sets.StringSet)
 	var memberCount = 1
 	var memberId = ""
 
@@ -264,10 +264,10 @@ func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMess
 
 		for m := range members.Members {
 			for r := range members.Members[m].Roles {
-				if _, ok := roleSet[members.Members[m].Roles[r].Name]; !ok {
-					roleSet[members.Members[m].Roles[r].Name] = sets.NewStringSet()
+				if _, ok := discordRoleSet[members.Members[m].Roles[r].Name]; !ok {
+					discordRoleSet[members.Members[m].Roles[r].Name] = sets.NewStringSet()
 				}
-				roleSet[members.Members[m].Roles[r].Name].Add(members.Members[m].User.Id)
+				discordRoleSet[members.Members[m].Roles[r].Name].Add(members.Members[m].User.Id)
 			}
 
 			if members.Members[m].User.Id > memberId {
@@ -278,14 +278,152 @@ func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMess
 		memberCount = len(members.Members)
 	}
 
-	for r := range roleSet {
-		fmt.Printf("%s: %+v\n", r, roleSet[r])
+	chremoasRoles, err := h.getRoles()
+
+	if err != nil {
+		return err
+	}
+
+	for r := range chremoasRoles {
+		membership, err := h.getRoleMembership(chremoasRoles[r])
+
+		if err != nil {
+			return err
+		}
+
+		roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", chremoasRoles[r]))
+		role, err := h.Redis.Client.HGetAll(roleName).Result()
+
+		if err != nil {
+			return err
+		}
+
+		var toAdd, toRemove *sets.StringSet
+		if _, ok := discordRoleSet[role["Name"]]; ok {
+			toAdd = membership.Difference(discordRoleSet[role["Name"]])
+			for t := range toAdd.Set {
+				h.updateDiscord(ctx,
+					t,
+					role["Name"],
+					discord.MemberUpdateOperation_ADD_OR_UPDATE_ROLES,
+					rolesrv.MemberSyncAction_ADDED,
+					response)
+			}
+			toRemove = discordRoleSet[role["Name"]].Difference(membership)
+			for t := range toRemove.Set {
+				h.updateDiscord(ctx,
+					t,
+					role["Name"],
+					discord.MemberUpdateOperation_REMOVE_ROLES,
+					rolesrv.MemberSyncAction_REMOVED,
+					response)
+			}
+		} else {
+			for t := range membership.Set {
+				h.updateDiscord(ctx,
+					t,
+					role["Name"],
+					discord.MemberUpdateOperation_ADD_OR_UPDATE_ROLES,
+					rolesrv.MemberSyncAction_ADDED,
+					response)
+			}
+		}
 	}
 
 	return nil
 }
 
-func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.SyncResponse) error {
+func (h *rolesHandler) updateDiscord(ctx context.Context, userId string, roleName string, operation discord.MemberUpdateOperation, action rolesrv.MemberSyncAction, response *rolesrv.MemberSyncResponse) error {
+	var discordIDMap = make(map[string]string)
+
+	// Get the role -> id map from discord
+	discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
+
+	if err != nil {
+		return err
+	}
+
+	for r := range discordRoles.Roles {
+		discordIDMap[discordRoles.Roles[r].Name] = discordRoles.Roles[r].Id
+	}
+
+	clients.discord.UpdateMember(ctx, &discord.UpdateMemberRequest{
+		Operation: operation,
+		UserId:    userId,
+		RoleIds:   []string{discordIDMap[roleName]},
+	})
+
+	response.Results = append(response.Results, &rolesrv.MemberSyncResult{
+		Action: action,
+		User:   userId,
+		Role:   roleName,
+	})
+
+	return nil
+}
+
+func (h *rolesHandler) getRoleMembership(role string) (members *sets.StringSet, err error) {
+	var filterASet = sets.NewStringSet()
+	var filterBSet = sets.NewStringSet()
+
+	roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", role))
+
+	r, err := h.Redis.Client.HGetAll(roleName).Result()
+
+	if err != nil {
+		return filterASet, err
+	}
+
+	filterAName := h.Redis.KeyName(fmt.Sprintf("filter_members:%s", r["FilterA"]))
+	filterBName := h.Redis.KeyName(fmt.Sprintf("filter_members:%s", r["FilterB"]))
+
+	exists, err := h.Redis.Client.Exists(filterAName).Result()
+
+	if err != nil {
+		return filterASet, err
+	}
+
+	if exists == 0 && r["FilterA"] != "wildcard" {
+		return filterASet, fmt.Errorf("Filter `%s` doesn't exists.", r["FilterA"])
+	}
+
+	exists, err = h.Redis.Client.Exists(filterBName).Result()
+
+	if err != nil {
+		return filterASet, err
+	}
+
+	if exists == 0 && r["FilterB"] != "wildcard" {
+		return filterASet, fmt.Errorf("Filter `%s` doesn't exists.", r["FilterB"])
+	}
+
+	filterA, err := h.Redis.Client.SMembers(filterAName).Result()
+
+	if err != nil {
+		return filterASet, err
+	}
+
+	filterB, err := h.Redis.Client.SMembers(filterBName).Result()
+
+	if err != nil {
+		return filterASet, err
+	}
+
+	filterASet.FromSlice(filterA)
+	filterBSet.FromSlice(filterB)
+
+	if r["FilterA"] == "wildcard" {
+		return filterBSet, nil
+	}
+
+	if r["FilterB"] == "wildcard" {
+		return filterASet, nil
+	}
+
+	return filterASet.Intersection(filterBSet), nil
+}
+
+func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.RoleSyncResponse) error {
 	var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
 	chremoasRoleSet := sets.NewStringSet()
 	discordRoleSet := sets.NewStringSet()

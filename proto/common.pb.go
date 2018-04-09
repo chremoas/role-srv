@@ -19,7 +19,9 @@ It has these top-level messages:
 	Role
 	UpdateInfo
 	GetRolesResponse
-	SyncResponse
+	RoleSyncResponse
+	MemberSyncResult
+	MemberSyncResponse
 */
 package chremoas_roles
 
