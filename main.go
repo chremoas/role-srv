@@ -22,6 +22,5 @@ func main() {
 
 func initialize(config *config.Configuration) error {
 	rolesrv.RegisterRolesHandler(service.Server(), handler.NewRolesHandler(config, service))
-	rolesrv.RegisterFiltersHandler(service.Server(), handler.NewFiltersHandler(config))
 	return nil
 }

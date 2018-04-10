@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package chremoas.roles;
 
-import "common.proto";
-
 enum MemberSyncAction {
     NOTHING = 0; // This is so that something shows up in the message
     ADDED = 1;
@@ -20,7 +18,17 @@ service Roles {
     rpc GetRoleKeys (NilMessage) returns (StringList) {};
     rpc GetRoleTypes (NilMessage) returns (StringList) {};
     rpc SyncMembers (NilMessage) returns (MemberSyncResponse) {};
+
+    rpc GetFilters (NilMessage) returns (FilterList) {};
+    rpc AddFilter (Filter) returns (NilMessage) {};
+    rpc RemoveFilter (Filter) returns (NilMessage) {};
+
+    rpc GetMembers (Filter) returns (MemberList) {};
+    rpc AddMembers (Members) returns (NilMessage) {};
+    rpc RemoveMembers (Members) returns (NilMessage) {};
 }
+
+message NilMessage {}
 
 message StringList {
     repeated string Value = 1;
@@ -65,4 +73,22 @@ message MemberSyncResult {
 
 message MemberSyncResponse {
     repeated MemberSyncResult Results = 1;
+}
+
+message FilterList {
+    repeated Filter FilterList = 1;
+}
+
+message Filter {
+    string Name = 1;
+    string Description = 2;
+}
+
+message Members {
+    repeated string Name = 1;
+    string Filter = 2;
+}
+
+message MemberList {
+    repeated string Members = 1;
 }
