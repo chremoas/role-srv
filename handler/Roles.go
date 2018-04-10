@@ -256,11 +256,11 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 	return nil
 }
 
-func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.MemberSyncResponse) error {
-	return h.syncMembers(ctx, response)
+func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.NilMessage) error {
+	return h.syncMembers(ctx)
 }
 
-func (h *rolesHandler) syncMembers(ctx context.Context, response *rolesrv.MemberSyncResponse) error {
+func (h *rolesHandler) syncMembers(ctx context.Context) error {
 	var roleNameMap = make(map[string]string)
 	var membershipSets = make(map[string]*sets.StringSet)
 
@@ -323,21 +323,10 @@ func (h *rolesHandler) syncMembers(ctx context.Context, response *rolesrv.Member
 
 	// Apply the membership sets to discord overwriting anything that's there.
 	for m := range membershipSets {
-		fmt.Printf("%v:\t%+v\n", m, membershipSets[m])
-		fmt.Printf("%v:\t%+v\n", m, membershipSets[m].ToSlice())
-
-		fmt.Printf("len: %d\n", len(membershipSets[m].ToSlice()))
-
 		clients.discord.UpdateMember(ctx, &discord.UpdateMemberRequest{
 			Operation: discord.MemberUpdateOperation_ADD_OR_UPDATE_ROLES,
 			UserId:    m,
 			RoleIds:   membershipSets[m].ToSlice(),
-		})
-
-		response.Results = append(response.Results, &rolesrv.MemberSyncResult{
-			Action: rolesrv.MemberSyncAction_ADDED,
-			User:   m,
-			Role:   "Meh",
 		})
 	}
 	return nil
@@ -601,7 +590,7 @@ func (h *rolesHandler) AddMembers(ctx context.Context, request *rolesrv.Members,
 		return err
 	}
 
-	h.syncMembers(ctx, &rolesrv.MemberSyncResponse{})
+	h.syncMembers(ctx)
 	response = &rolesrv.NilMessage{}
 	return nil
 }
@@ -633,7 +622,7 @@ func (h *rolesHandler) RemoveMembers(ctx context.Context, request *rolesrv.Membe
 		return err
 	}
 
-	h.syncMembers(ctx, &rolesrv.MemberSyncResponse{})
+	h.syncMembers(ctx)
 	response = &rolesrv.NilMessage{}
 	return nil
 }
