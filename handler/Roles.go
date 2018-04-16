@@ -590,7 +590,6 @@ func (h *rolesHandler) AddMembers(ctx context.Context, request *rolesrv.Members,
 		return err
 	}
 
-	h.syncMembers(ctx)
 	response = &rolesrv.NilMessage{}
 	return nil
 }
@@ -622,7 +621,6 @@ func (h *rolesHandler) RemoveMembers(ctx context.Context, request *rolesrv.Membe
 		return err
 	}
 
-	h.syncMembers(ctx)
 	response = &rolesrv.NilMessage{}
 	return nil
 }
