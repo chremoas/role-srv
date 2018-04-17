@@ -187,6 +187,7 @@ func (h *rolesHandler) RemoveRole(ctx context.Context, request *rolesrv.Role, re
 }
 
 func (h *rolesHandler) GetRoles(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.GetRolesResponse) error {
+	var sigValue bool
 	roles, err := h.getRoles()
 
 	if err != nil {
@@ -194,14 +195,23 @@ func (h *rolesHandler) GetRoles(ctx context.Context, request *rolesrv.NilMessage
 	}
 
 	for role := range roles {
-		roleName, err := h.Redis.Client.HGet(h.Redis.KeyName(fmt.Sprintf("role:%s", roles[role])), "Name").Result()
+		roleInfo, err := h.Redis.Client.HGetAll(h.Redis.KeyName(fmt.Sprintf("role:%s", roles[role]))).Result()
 		if err != nil {
 			return err
 		}
 
+		fmt.Printf("sig: %+v\n", roleInfo["Sig"])
+
+		if roleInfo["Sig"] == "0" {
+			sigValue = false
+		} else {
+			sigValue = true
+		}
+
 		response.Roles = append(response.Roles, &rolesrv.Role{
 			ShortName: roles[role],
-			Name:      roleName,
+			Name:      roleInfo["Name"],
+			Sig:       sigValue,
 		})
 	}
 
