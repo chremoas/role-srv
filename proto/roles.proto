@@ -33,15 +33,16 @@ message Role {
     string ShortName = 2;
     string FilterA = 3;
     string FilterB = 4;
+    bool Sig = 5;
 
     // Discord
-    string Name = 5;
-    int32 Color = 6;
-    bool Hoist = 7;
-    int32 Position = 8;
-    int32 Permissions = 9;
-    bool Managed = 10;
-    bool Mentionable = 11;
+    string Name = 20;
+    int32 Color = 21;
+    bool Hoist = 22;
+    int32 Position = 23;
+    int32 Permissions = 24;
+    bool Managed = 25;
+    bool Mentionable = 26;
 }
 
 message UpdateInfo {

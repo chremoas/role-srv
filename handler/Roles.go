@@ -194,7 +194,15 @@ func (h *rolesHandler) GetRoles(ctx context.Context, request *rolesrv.NilMessage
 	}
 
 	for role := range roles {
-		response.Roles = append(response.Roles, &rolesrv.Role{Name: roles[role]})
+		roleName, err := h.Redis.Client.HGet(h.Redis.KeyName(fmt.Sprintf("role:%s", roles[role])), "Name").Result()
+		if err != nil {
+			return err
+		}
+
+		response.Roles = append(response.Roles, &rolesrv.Role{
+			ShortName: roles[role],
+			Name:      roleName,
+		})
 	}
 
 	return nil
