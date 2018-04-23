@@ -200,8 +200,6 @@ func (h *rolesHandler) GetRoles(ctx context.Context, request *rolesrv.NilMessage
 			return err
 		}
 
-		fmt.Printf("sig: %+v\n", roleInfo["Sig"])
-
 		if roleInfo["Sig"] == "0" {
 			sigValue = false
 		} else {
@@ -252,12 +250,14 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 		return err
 	}
 
-	color, err := strconv.ParseInt(role["Color"], 10, 32)
-	position, err := strconv.ParseInt(role["Position"], 10, 32)
-	permissions, err := strconv.ParseInt(role["Permissions"], 10, 32)
-	hoist, err := strconv.ParseBool(role["Hoist"])
-	managed, err := strconv.ParseBool(role["Managed"])
-	mentionable, err := strconv.ParseBool(role["Mentionable"])
+	color, _ := strconv.ParseInt(role["Color"], 10, 32)
+	position, _ := strconv.ParseInt(role["Position"], 10, 32)
+	permissions, _ := strconv.ParseInt(role["Permissions"], 10, 32)
+	hoist, _ := strconv.ParseBool(role["Hoist"])
+	managed, _ := strconv.ParseBool(role["Managed"])
+	mentionable, _ := strconv.ParseBool(role["Mentionable"])
+	sig, _ := strconv.ParseBool(role["Sig"])
+	joinable, _ := strconv.ParseBool(role["Joinable"])
 
 	response.ShortName = request.ShortName
 	response.Type = role["Type"]
@@ -270,6 +270,8 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 	response.Permissions = int32(permissions)
 	response.Managed = managed
 	response.Mentionable = mentionable
+	response.Sig = sig
+	response.Joinable = joinable
 
 	return nil
 }
