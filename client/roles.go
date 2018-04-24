@@ -81,6 +81,11 @@ func (r Roles) AddRole(ctx context.Context, sender, shortName, roleType, filterA
 		return common.SendFatal(err.Error())
 	}
 
+	_, err = r.RoleClient.SyncRoles(ctx, &rolesrv.NilMessage{})
+	if err != nil {
+		return common.SendFatal(err.Error())
+	}
+
 	return common.SendSuccess(fmt.Sprintf("Added: %s\n", shortName))
 }
 
@@ -105,6 +110,11 @@ func (r Roles) RemoveRole(ctx context.Context, sender, shortName string, sig boo
 	}
 
 	_, err = r.RoleClient.RemoveRole(ctx, &rolesrv.Role{ShortName: shortName})
+	if err != nil {
+		return common.SendFatal(err.Error())
+	}
+
+	_, err = r.RoleClient.SyncRoles(ctx, &rolesrv.NilMessage{})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}

@@ -9,6 +9,14 @@ import (
 )
 
 func (r Roles) JoinSIG(ctx context.Context, sender, sig string) string {
+	return r.sigAction(ctx, sender, sig, true)
+}
+
+func (r Roles) LeaveSIG(ctx context.Context, sender, sig string) string {
+	return r.sigAction(ctx, sender, sig, false)
+}
+
+func (r Roles) sigAction(ctx context.Context, sender, sig string, join bool) string {
 	s := strings.Split(sender, ":")
 
 	foo, err := r.RoleClient.GetRole(ctx, &rolesrv.Role{ShortName: sig})
@@ -32,10 +40,23 @@ func (r Roles) JoinSIG(ctx context.Context, sender, sig string) string {
 	}
 
 	// add member to role
-	_, err = r.RoleClient.AddMembers(ctx, &rolesrv.Members{Name: []string{s[1]}, Filter: role.FilterB})
+	if join {
+		_, err = r.RoleClient.AddMembers(ctx, &rolesrv.Members{Name: []string{s[1]}, Filter: role.FilterB})
+	} else {
+		_, err = r.RoleClient.RemoveMembers(ctx, &rolesrv.Members{Name: []string{s[1]}, Filter: role.FilterB})
+	}
 	if err != nil {
 		return common.SendError(err.Error())
 	}
 
-	return common.SendSuccess(fmt.Sprintf("Added %s to %s", s[1], sig))
+	_, err = r.RoleClient.SyncMembers(ctx, &rolesrv.NilMessage{})
+	if err != nil {
+		return common.SendError(err.Error())
+	}
+
+	if join {
+		return common.SendSuccess(fmt.Sprintf("Added %s to %s", s[1], sig))
+	} else {
+		return common.SendSuccess(fmt.Sprintf("Removed %s to %s", s[1], sig))
+	}
 }

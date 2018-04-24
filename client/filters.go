@@ -98,7 +98,15 @@ func (r Roles) RemoveAllMembers(ctx context.Context, name string) error {
 		return err
 	}
 
-	r.RoleClient.RemoveMembers(ctx, &rolesrv.Members{Name: members.Members, Filter: name})
+	_, err = r.RoleClient.RemoveMembers(ctx, &rolesrv.Members{Name: members.Members, Filter: name})
+	if err != nil {
+		return err
+	}
+
+	_, err = r.RoleClient.SyncMembers(ctx, &rolesrv.NilMessage{})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -119,6 +127,11 @@ func (r Roles) AddMember(ctx context.Context, sender, user, filter string) strin
 		return common.SendFatal(err.Error())
 	}
 
+	_, err = r.RoleClient.SyncMembers(ctx, &rolesrv.NilMessage{})
+	if err != nil {
+		return common.SendFatal(err.Error())
+	}
+
 	return common.SendSuccess(fmt.Sprintf("Added '%s' to '%s'\n", user, filter))
 }
 
@@ -134,6 +147,11 @@ func (r Roles) RemoveMember(ctx context.Context, sender, user, filter string) st
 
 	_, err = r.RoleClient.RemoveMembers(ctx,
 		&rolesrv.Members{Name: []string{user}, Filter: filter})
+	if err != nil {
+		return common.SendFatal(err.Error())
+	}
+
+	_, err = r.RoleClient.SyncMembers(ctx, &rolesrv.NilMessage{})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
