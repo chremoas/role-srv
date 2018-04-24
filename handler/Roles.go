@@ -187,7 +187,7 @@ func (h *rolesHandler) RemoveRole(ctx context.Context, request *rolesrv.Role, re
 }
 
 func (h *rolesHandler) GetRoles(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.GetRolesResponse) error {
-	var sigValue bool
+	var sigValue, joinableValue bool
 	roles, err := h.getRoles()
 
 	if err != nil {
@@ -206,10 +206,17 @@ func (h *rolesHandler) GetRoles(ctx context.Context, request *rolesrv.NilMessage
 			sigValue = true
 		}
 
+		if roleInfo["Joinable"] == "0" {
+			joinableValue = false
+		} else {
+			joinableValue = true
+		}
+
 		response.Roles = append(response.Roles, &rolesrv.Role{
 			ShortName: roles[role],
 			Name:      roleInfo["Name"],
 			Sig:       sigValue,
+			Joinable:  joinableValue,
 		})
 	}
 

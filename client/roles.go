@@ -17,7 +17,7 @@ type Roles struct {
 
 var clientType = map[bool]string{true: "SIG", false: "Role"}
 
-func (r Roles) ListRoles(ctx context.Context, sig bool) string {
+func (r Roles) ListRoles(ctx context.Context, all, sig bool) string {
 	var buffer bytes.Buffer
 	var roleList = make(map[string]string)
 	roles, err := r.RoleClient.GetRoles(ctx, &rolesrv.NilMessage{})
@@ -28,6 +28,9 @@ func (r Roles) ListRoles(ctx context.Context, sig bool) string {
 
 	for role := range roles.Roles {
 		if roles.Roles[role].Sig == sig {
+			if roles.Roles[role].Sig && !roles.Roles[role].Joinable && !all {
+				continue
+			}
 			roleList[roles.Roles[role].ShortName] = roles.Roles[role].Name
 		}
 	}
@@ -44,7 +47,7 @@ func (r Roles) ListRoles(ctx context.Context, sig bool) string {
 	return fmt.Sprintf("```%s```", buffer.String())
 }
 
-func (r Roles) AddRole(ctx context.Context, sender, shortName, roleType, filterA, filterB, roleName string, sig bool) string {
+func (r Roles) AddRole(ctx context.Context, sender, shortName, roleType, filterA, filterB string, joinable bool, roleName string, sig bool) string {
 
 	if len(roleName) > 0 && roleName[0] == '"' {
 		roleName = roleName[1:]
@@ -71,6 +74,7 @@ func (r Roles) AddRole(ctx context.Context, sender, shortName, roleType, filterA
 			Name:      roleName,
 			FilterA:   filterA,
 			FilterB:   filterB,
+			Joinable:  joinable,
 		})
 
 	if err != nil {

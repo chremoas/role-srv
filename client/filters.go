@@ -92,6 +92,17 @@ func (r Roles) ListMembers(ctx context.Context, name string) string {
 	return fmt.Sprintf("```%s```", buffer.String())
 }
 
+func (r Roles) RemoveAllMembers(ctx context.Context, name string) error {
+	members, err := r.RoleClient.GetMembers(ctx, &rolesrv.Filter{Name: name})
+	if err != nil {
+		return err
+	}
+
+	r.RoleClient.RemoveMembers(ctx, &rolesrv.Members{Name: members.Members, Filter: name})
+
+	return nil
+}
+
 func (r Roles) AddMember(ctx context.Context, sender, user, filter string) string {
 	canPerform, err := r.Permissions.CanPerform(ctx, sender)
 	if err != nil {
