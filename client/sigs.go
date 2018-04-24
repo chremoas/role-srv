@@ -57,6 +57,6 @@ func (r Roles) sigAction(ctx context.Context, sender, sig string, join bool) str
 	if join {
 		return common.SendSuccess(fmt.Sprintf("Added %s to %s", s[1], sig))
 	} else {
-		return common.SendSuccess(fmt.Sprintf("Removed %s to %s", s[1], sig))
+		return common.SendSuccess(fmt.Sprintf("Removed %s from %s", s[1], sig))
 	}
 }
