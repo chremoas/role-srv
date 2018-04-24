@@ -10,6 +10,7 @@ import (
 
 func (r Roles) JoinSIG(ctx context.Context, sender, sig string) string {
 	s := strings.Split(sender, ":")
+
 	foo, err := r.RoleClient.GetRole(ctx, &rolesrv.Role{ShortName: sig})
 	if err != nil {
 		return common.SendError(err.Error())
@@ -36,5 +37,5 @@ func (r Roles) JoinSIG(ctx context.Context, sender, sig string) string {
 		return common.SendError(err.Error())
 	}
 
-	return common.SendSuccess(fmt.Sprintf("Added %s to %s", sender, sig))
+	return common.SendSuccess(fmt.Sprintf("Added %s to %s", s[1], sig))
 }
