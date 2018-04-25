@@ -48,7 +48,6 @@ func (r Roles) ListRoles(ctx context.Context, all, sig bool) string {
 }
 
 func (r Roles) AddRole(ctx context.Context, sender, shortName, roleType, filterA, filterB string, joinable bool, roleName string, sig bool) string {
-
 	if len(roleName) > 0 && roleName[0] == '"' {
 		roleName = roleName[1:]
 	}
