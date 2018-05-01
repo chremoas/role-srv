@@ -23,7 +23,7 @@ type rolesHandler struct {
 }
 
 type clientList struct {
-	discord discord.DiscordGatewayClient
+	discord discord.DiscordGatewayService
 }
 
 var clients clientList
@@ -34,7 +34,7 @@ func NewRolesHandler(config *config.Configuration, service micro.Service) rolesr
 	c := service.Client()
 
 	clients = clientList{
-		discord: discord.NewDiscordGatewayClient(config.LookupService("gateway", "discord"), c),
+		discord: discord.NewDiscordGatewayService(config.LookupService("gateway", "discord"), c),
 	}
 
 	addr := fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port)

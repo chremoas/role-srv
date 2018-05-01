@@ -10,8 +10,8 @@ import (
 )
 
 type Roles struct {
-	RoleClient  rolesrv.RolesClient
-	PermsClient permsrv.PermissionsClient
+	RoleClient  rolesrv.RolesService
+	PermsClient permsrv.PermissionsService
 	Permissions common.Permissions
 }
 
