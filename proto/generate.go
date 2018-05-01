@@ -1,3 +1,3 @@
 package chremoas_roles
 
-//go:generate sh -c "protoc --go_out=plugins=micro:. *.proto"
+//go:generate sh -c "protoc --proto_path=$GOPATH/src:. --micro_out=. --go_out=. *.proto"
