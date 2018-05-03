@@ -159,34 +159,6 @@ func (r Roles) RemoveMember(ctx context.Context, sender, user, filter string) st
 	return common.SendSuccess(fmt.Sprintf("Removed '%s' from '%s'\n", user, filter))
 }
 
-func (r Roles) SyncRoles(ctx context.Context) string {
-	var buffer bytes.Buffer
-	response, err := r.RoleClient.SyncRoles(ctx, &rolesrv.NilMessage{})
-
-	if err != nil {
-		return common.SendFatal(err.Error())
-	}
-
-	if len(response.Added) == 0 {
-		buffer.WriteString("No roles to add")
-	} else {
-		buffer.WriteString("Adding:\n")
-		for r := range response.Added {
-			buffer.WriteString(fmt.Sprintf("\t%s\n", response.Added[r]))
-		}
-	}
-
-	if len(response.Removed) == 0 {
-		buffer.WriteString("\nNo roles to remove")
-	} else {
-		buffer.WriteString("\nRemoving:\n")
-		for r := range response.Removed {
-			buffer.WriteString(fmt.Sprintf("\t%s\n", response.Removed[r]))
-		}
-	}
-
-	return fmt.Sprintf("```%s\n```", buffer.String())
-}
 
 func (r Roles) SyncMembers(ctx context.Context) string {
 	//var buffer bytes.Buffer

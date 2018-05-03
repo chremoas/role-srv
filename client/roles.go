@@ -155,3 +155,32 @@ func (r Roles) RoleInfo(ctx context.Context, sender, shortName string, sig bool)
 
 	return fmt.Sprintf("```%s```", buffer.String())
 }
+
+func (r Roles) SyncRoles(ctx context.Context) string {
+	var buffer bytes.Buffer
+	response, err := r.RoleClient.SyncRoles(ctx, &rolesrv.NilMessage{})
+
+	if err != nil {
+		return common.SendFatal(err.Error())
+	}
+
+	if len(response.Added) == 0 {
+		buffer.WriteString("No roles to add")
+	} else {
+		buffer.WriteString("Adding:\n")
+		for r := range response.Added {
+			buffer.WriteString(fmt.Sprintf("\t%s\n", response.Added[r]))
+		}
+	}
+
+	if len(response.Removed) == 0 {
+		buffer.WriteString("\nNo roles to remove")
+	} else {
+		buffer.WriteString("\nRemoving:\n")
+		for r := range response.Removed {
+			buffer.WriteString(fmt.Sprintf("\t%s\n", response.Removed[r]))
+		}
+	}
+
+	return fmt.Sprintf("```%s\n```", buffer.String())
+}
