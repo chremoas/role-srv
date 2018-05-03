@@ -286,10 +286,13 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 }
 
 func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.NilMessage) error {
-	return h.syncMembers(ctx)
+	go h.syncMembers(ctx)
+	return nil
 }
 
 func (h *rolesHandler) syncMembers(ctx context.Context) error {
+	sugar := h.Logger.Sugar()
+	sugar.Info("Starting syncMembers()")
 	var roleNameMap = make(map[string]string)
 	var membershipSets = make(map[string]*sets.StringSet)
 
@@ -303,6 +306,7 @@ func (h *rolesHandler) syncMembers(ctx context.Context) error {
 		members, err := clients.discord.GetAllMembers(ctx, &discord.GetAllMembersRequest{NumberPerPage: numberPerPage, After: memberId})
 
 		if err != nil {
+			sugar.Errorf("syncMembers: GetAllMembers: %s", err.Error())
 			return err
 		}
 
@@ -323,6 +327,7 @@ func (h *rolesHandler) syncMembers(ctx context.Context) error {
 	// Get all the Roles from discord and create a map of their name to theid Id
 	discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
 	if err != nil {
+		sugar.Errorf("syncMembers: GetAllRoles: %s", err.Error())
 		return err
 	}
 
@@ -333,20 +338,27 @@ func (h *rolesHandler) syncMembers(ctx context.Context) error {
 	// Get all the Chremoas roles and build membership Sets
 	chremoasRoles, err := h.getRoles()
 	if err != nil {
+		sugar.Errorf("syncMembers: getRoles: %s", err.Error())
 		return err
 	}
 
 	for r := range chremoasRoles {
 		membership, err := h.getRoleMembership(chremoasRoles[r])
+		if err != nil {
+			sugar.Errorf("syncMembers: getRoleMembership: %s", err.Error())
+			return err
+		}
+
 		roleName, err := h.getRole(chremoasRoles[r])
+		if err != nil {
+			sugar.Errorf("syncMembers: getRole: %s", err.Error())
+			return err
+		}
+
 		roleId := roleNameMap[roleName["Name"]]
 
 		for m := range membership.Set {
 			membershipSets[m].Add(roleId)
-		}
-
-		if err != nil {
-			return err
 		}
 	}
 
@@ -358,6 +370,8 @@ func (h *rolesHandler) syncMembers(ctx context.Context) error {
 			RoleIds:   membershipSets[m].ToSlice(),
 		})
 	}
+
+	h.Logger.Info("Finished syncMembers()")
 	return nil
 }
 
