@@ -15,11 +15,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"go.uber.org/zap"
 )
 
 type rolesHandler struct {
 	Client client.Client
 	Redis  *redis.Client
+	Logger *zap.Logger
 }
 
 type clientList struct {
@@ -30,7 +32,7 @@ var clients clientList
 var roleKeys = []string{"Name", "Color", "Hoist", "Position", "Permissions", "Managed", "Mentionable"}
 var roleTypes = []string{"internal", "discord"}
 
-func NewRolesHandler(config *config.Configuration, service micro.Service) rolesrv.RolesHandler {
+func NewRolesHandler(config *config.Configuration, service micro.Service, log *zap.Logger) rolesrv.RolesHandler {
 	c := service.Client()
 
 	clients = clientList{
@@ -45,7 +47,7 @@ func NewRolesHandler(config *config.Configuration, service micro.Service) rolesr
 		panic(err)
 	}
 
-	return &rolesHandler{Redis: redisClient}
+	return &rolesHandler{Redis: redisClient, Logger: log}
 }
 
 func (h *rolesHandler) GetRoleKeys(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.StringList) error {
