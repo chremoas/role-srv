@@ -426,6 +426,7 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessag
 	var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
 	chremoasRoleSet := sets.NewStringSet()
 	discordRoleSet := sets.NewStringSet()
+	sugar := h.Logger.Sugar()
 
 	chremoasRoles, err := h.getRoles()
 	if err != nil {
@@ -460,6 +461,9 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessag
 
 	toAdd := chremoasRoleSet.Difference(discordRoleSet)
 	toDelete := discordRoleSet.Difference(chremoasRoleSet)
+
+	sugar.Infof("toAdd: %v", toAdd)
+	sugar.Infof("toDelete: %v", toDelete)
 
 	for r := range toAdd.Set {
 		_, err := clients.discord.CreateRole(ctx, &discord.CreateRoleRequest{Name: r})

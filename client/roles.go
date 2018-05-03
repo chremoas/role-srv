@@ -7,12 +7,14 @@ import (
 	permsrv "github.com/chremoas/perms-srv/proto"
 	rolesrv "github.com/chremoas/role-srv/proto"
 	common "github.com/chremoas/services-common/command"
+	"go.uber.org/zap"
 )
 
 type Roles struct {
 	RoleClient  rolesrv.RolesService
 	PermsClient permsrv.PermissionsService
 	Permissions common.Permissions
+	Logger      *zap.Logger
 }
 
 var clientType = map[bool]string{true: "SIG", false: "Role"}
@@ -157,12 +159,15 @@ func (r Roles) RoleInfo(ctx context.Context, sender, shortName string, sig bool)
 }
 
 func (r Roles) SyncRoles(ctx context.Context) string {
+	r.Logger.Info("Calling SyncRoles()")
 	var buffer bytes.Buffer
 	response, err := r.RoleClient.SyncRoles(ctx, &rolesrv.NilMessage{})
 
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
+
+	r.Logger.Info(fmt.Sprintf("Added: %v", response.Added))
 
 	if len(response.Added) == 0 {
 		buffer.WriteString("No roles to add")
@@ -173,6 +178,7 @@ func (r Roles) SyncRoles(ctx context.Context) string {
 		}
 	}
 
+	r.Logger.Info(fmt.Sprintf("Removed: %v", response.Added))
 	if len(response.Removed) == 0 {
 		buffer.WriteString("\nNo roles to remove")
 	} else {
