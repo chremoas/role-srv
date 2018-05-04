@@ -49,7 +49,7 @@ func (r Roles) sigAction(ctx context.Context, sender, sig string, join bool) str
 		return common.SendError(err.Error())
 	}
 
-	_, err = r.RoleClient.SyncMembers(ctx, &rolesrv.NilMessage{})
+	_, err = r.RoleClient.SyncMembers(ctx, r.GetSyncRequest(sender))
 	if err != nil {
 		return common.SendError(err.Error())
 	}

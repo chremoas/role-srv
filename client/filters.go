@@ -92,7 +92,7 @@ func (r Roles) ListMembers(ctx context.Context, name string) string {
 	return fmt.Sprintf("```%s```", buffer.String())
 }
 
-func (r Roles) RemoveAllMembers(ctx context.Context, name string) error {
+func (r Roles) RemoveAllMembers(ctx context.Context, name, sender string) error {
 	members, err := r.RoleClient.GetMembers(ctx, &rolesrv.Filter{Name: name})
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (r Roles) RemoveAllMembers(ctx context.Context, name string) error {
 		return err
 	}
 
-	_, err = r.RoleClient.SyncMembers(ctx, &rolesrv.NilMessage{})
+	_, err = r.RoleClient.SyncMembers(ctx, r.GetSyncRequest(sender))
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func (r Roles) AddMember(ctx context.Context, sender, user, filter string) strin
 		return common.SendFatal(err.Error())
 	}
 
-	_, err = r.RoleClient.SyncMembers(ctx, &rolesrv.NilMessage{})
+	_, err = r.RoleClient.SyncMembers(ctx, r.GetSyncRequest(sender))
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -151,7 +151,7 @@ func (r Roles) RemoveMember(ctx context.Context, sender, user, filter string) st
 		return common.SendFatal(err.Error())
 	}
 
-	_, err = r.RoleClient.SyncMembers(ctx, &rolesrv.NilMessage{})
+	_, err = r.RoleClient.SyncMembers(ctx, r.GetSyncRequest(sender))
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -160,9 +160,9 @@ func (r Roles) RemoveMember(ctx context.Context, sender, user, filter string) st
 }
 
 
-func (r Roles) SyncMembers(ctx context.Context) string {
+func (r Roles) SyncMembers(ctx context.Context, sender string) string {
 	//var buffer bytes.Buffer
-	_, err := r.RoleClient.SyncMembers(ctx, &rolesrv.NilMessage{})
+	_, err := r.RoleClient.SyncMembers(ctx, r.GetSyncRequest(sender))
 
 	if err != nil {
 		return common.SendFatal(err.Error())

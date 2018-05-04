@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"go.uber.org/zap"
+	common "github.com/chremoas/services-common/command"
 )
 
 type rolesHandler struct {
@@ -285,14 +286,19 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 	return nil
 }
 
-func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.NilMessage) error {
-	go h.syncMembers(ctx)
+func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.SyncRequest, response *rolesrv.NilMessage) error {
+	go h.syncMembers(request.ChannelId, request.UserId)
 	return nil
 }
 
-func (h *rolesHandler) syncMembers(ctx context.Context) error {
+func (h *rolesHandler) sendMessage(ctx context.Context, channelId, message string) {
+	clients.discord.SendMessage(ctx, &discord.SendMessageRequest{ChannelId: channelId, Message: message})
+}
+func (h *rolesHandler) syncMembers(channelId, userId string) error {
+	ctx := context.Background()
 	sugar := h.Logger.Sugar()
 	sugar.Info("Starting syncMembers()")
+	h.sendMessage(ctx, channelId, common.SendSuccess("Starting syncMembers()"))
 	var roleNameMap = make(map[string]string)
 	var membershipSets = make(map[string]*sets.StringSet)
 
@@ -306,7 +312,9 @@ func (h *rolesHandler) syncMembers(ctx context.Context) error {
 		members, err := clients.discord.GetAllMembers(ctx, &discord.GetAllMembersRequest{NumberPerPage: numberPerPage, After: memberId})
 
 		if err != nil {
-			sugar.Errorf("syncMembers: GetAllMembers: %s", err.Error())
+			msg := fmt.Sprintf("syncMembers: GetAllMembers: %s", err.Error())
+			h.sendMessage(ctx, channelId, common.SendFatal(msg))
+			sugar.Error(msg)
 			return err
 		}
 
@@ -327,7 +335,9 @@ func (h *rolesHandler) syncMembers(ctx context.Context) error {
 	// Get all the Roles from discord and create a map of their name to theid Id
 	discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
 	if err != nil {
-		sugar.Errorf("syncMembers: GetAllRoles: %s", err.Error())
+		msg := fmt.Sprintf("syncMembers: GetAllRoles: %s", err.Error())
+		h.sendMessage(ctx, channelId, common.SendFatal(msg))
+		sugar.Error(msg)
 		return err
 	}
 
@@ -338,20 +348,26 @@ func (h *rolesHandler) syncMembers(ctx context.Context) error {
 	// Get all the Chremoas roles and build membership Sets
 	chremoasRoles, err := h.getRoles()
 	if err != nil {
-		sugar.Errorf("syncMembers: getRoles: %s", err.Error())
+		msg := fmt.Sprintf("syncMembers: getRoles: %s", err.Error())
+		h.sendMessage(ctx, channelId, common.SendFatal(msg))
+		sugar.Error(msg)
 		return err
 	}
 
 	for r := range chremoasRoles {
 		membership, err := h.getRoleMembership(chremoasRoles[r])
 		if err != nil {
-			sugar.Errorf("syncMembers: getRoleMembership: %s", err.Error())
+			msg := fmt.Sprintf("syncMembers: getRoleMembership: %s", err.Error())
+			h.sendMessage(ctx, channelId, common.SendFatal(msg))
+			sugar.Error(msg)
 			return err
 		}
 
 		roleName, err := h.getRole(chremoasRoles[r])
 		if err != nil {
-			sugar.Errorf("syncMembers: getRole: %s", err.Error())
+			msg := fmt.Sprintf("syncMembers: getRole: %s", err.Error())
+			h.sendMessage(ctx, channelId, common.SendFatal(msg))
+			sugar.Error(msg)
 			return err
 		}
 
@@ -372,6 +388,7 @@ func (h *rolesHandler) syncMembers(ctx context.Context) error {
 	}
 
 	h.Logger.Info("Finished syncMembers()")
+	h.sendMessage(ctx, channelId, common.SendSuccess("Finished syncMembers()"))
 	return nil
 }
 
@@ -436,7 +453,7 @@ func (h *rolesHandler) getRoleMembership(role string) (members *sets.StringSet, 
 	return filterASet.Intersection(filterBSet), nil
 }
 
-func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.RoleSyncResponse) error {
+func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.SyncRequest, response *rolesrv.RoleSyncResponse) error {
 	var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
 	chremoasRoleSet := sets.NewStringSet()
 	discordRoleSet := sets.NewStringSet()

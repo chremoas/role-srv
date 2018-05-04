@@ -82,7 +82,7 @@ func (r Roles) AddRole(ctx context.Context, sender, shortName, roleType, filterA
 		return common.SendFatal(err.Error())
 	}
 
-	_, err = r.RoleClient.SyncRoles(ctx, &rolesrv.NilMessage{})
+	_, err = r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender))
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -115,7 +115,7 @@ func (r Roles) RemoveRole(ctx context.Context, sender, shortName string, sig boo
 		return common.SendFatal(err.Error())
 	}
 
-	_, err = r.RoleClient.SyncRoles(ctx, &rolesrv.NilMessage{})
+	_, err = r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender))
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -158,10 +158,10 @@ func (r Roles) RoleInfo(ctx context.Context, sender, shortName string, sig bool)
 	return fmt.Sprintf("```%s```", buffer.String())
 }
 
-func (r Roles) SyncRoles(ctx context.Context) string {
+func (r Roles) SyncRoles(ctx context.Context, sender string) string {
 	r.Logger.Info("Calling SyncRoles()")
 	var buffer bytes.Buffer
-	response, err := r.RoleClient.SyncRoles(ctx, &rolesrv.NilMessage{})
+	response, err := r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender))
 
 	if err != nil {
 		return common.SendFatal(err.Error())
