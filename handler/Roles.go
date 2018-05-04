@@ -5,19 +5,18 @@ import (
 	"fmt"
 	discord "github.com/chremoas/discord-gateway/proto"
 	rolesrv "github.com/chremoas/role-srv/proto"
+	common "github.com/chremoas/services-common/command"
 	"github.com/chremoas/services-common/config"
 	redis "github.com/chremoas/services-common/redis"
 	"github.com/chremoas/services-common/sets"
 	"github.com/fatih/structs"
 	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/client"
+	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"regexp"
 	"strconv"
 	"strings"
-	"go.uber.org/zap"
-	common "github.com/chremoas/services-common/command"
-	"time"
 )
 
 type rolesHandler struct {
@@ -295,6 +294,7 @@ func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.SyncReq
 func (h *rolesHandler) sendMessage(ctx context.Context, channelId, message string) {
 	clients.discord.SendMessage(ctx, &discord.SendMessageRequest{ChannelId: channelId, Message: message})
 }
+
 func (h *rolesHandler) syncMembers(channelId, userId string) error {
 	ctx := context.Background()
 	sugar := h.Logger.Sugar()
@@ -311,9 +311,9 @@ func (h *rolesHandler) syncMembers(channelId, userId string) error {
 	h.sendMessage(ctx, channelId, common.SendSuccess("Getting all Discord members"))
 	// Need to pre-populate the membership sets with all the users so we can pick up users with no roles.
 	for memberCount > 0 {
-		longCtx, _ := context.WithTimeout(context.Background(), time.Minute * 5)
+		//longCtx, _ := context.WithTimeout(context.Background(), time.Second * 20)
 
-		members, err := clients.discord.GetAllMembers(longCtx, &discord.GetAllMembersRequest{NumberPerPage: numberPerPage, After: memberId})
+		members, err := clients.discord.GetAllMembers(ctx, &discord.GetAllMembersRequest{NumberPerPage: numberPerPage, After: memberId})
 		if err != nil {
 			msg := fmt.Sprintf("syncMembers: GetAllMembers: %s", err.Error())
 			h.sendMessage(ctx, channelId, common.SendFatal(msg))
@@ -327,7 +327,10 @@ func (h *rolesHandler) syncMembers(channelId, userId string) error {
 				membershipSets[userId] = sets.NewStringSet()
 			}
 
-			if members.Members[m].User.Id > memberId {
+			oldNum, _ := strconv.Atoi(members.Members[m].User.Id)
+			newNum, _ := strconv.Atoi(memberId)
+
+			if oldNum > newNum {
 				memberId = members.Members[m].User.Id
 			}
 		}
@@ -406,58 +409,61 @@ func (h *rolesHandler) getRoleMembership(role string) (members *sets.StringSet, 
 	roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", role))
 
 	r, err := h.Redis.Client.HGetAll(roleName).Result()
-
 	if err != nil {
 		return filterASet, err
 	}
 
-	filterAName := h.Redis.KeyName(fmt.Sprintf("filter_members:%s", r["FilterA"]))
-	filterBName := h.Redis.KeyName(fmt.Sprintf("filter_members:%s", r["FilterB"]))
+	filterADesc := h.Redis.KeyName(fmt.Sprintf("filter_description:%s", r["FilterA"]))
+	filterBDesc := h.Redis.KeyName(fmt.Sprintf("filter_description:%s", r["FilterB"]))
 
-	exists, err := h.Redis.Client.Exists(filterAName).Result()
-
-	if err != nil {
-		return filterASet, err
-	}
-
-	if exists == 0 && r["FilterA"] != "wildcard" {
-		return filterASet, fmt.Errorf("Filter `%s` doesn't exists.", r["FilterA"])
-	}
-
-	exists, err = h.Redis.Client.Exists(filterBName).Result()
-
-	if err != nil {
-		return filterASet, err
-	}
-
-	if exists == 0 && r["FilterB"] != "wildcard" {
-		return filterASet, fmt.Errorf("Filter `%s` doesn't exists.", r["FilterB"])
-	}
-
-	filterA, err := h.Redis.Client.SMembers(filterAName).Result()
-
-	if err != nil {
-		return filterASet, err
-	}
-
-	filterB, err := h.Redis.Client.SMembers(filterBName).Result()
-
-	if err != nil {
-		return filterASet, err
-	}
-
-	filterASet.FromSlice(filterA)
-	filterBSet.FromSlice(filterB)
-
-	if r["FilterA"] == "wildcard" {
-		return filterBSet, nil
-	}
+	filterAMembers := h.Redis.KeyName(fmt.Sprintf("filter_members:%s", r["FilterA"]))
+	filterBMembers := h.Redis.KeyName(fmt.Sprintf("filter_members:%s", r["FilterB"]))
 
 	if r["FilterB"] == "wildcard" {
+		exists, err := h.Redis.Client.Exists(filterADesc).Result()
+		if err != nil {
+			return filterASet, err
+		}
+
+		if exists == 0 {
+			return filterASet, fmt.Errorf("Filter `%s` doesn't exists.", r["FilterA"])
+		}
+
+		filterA, err := h.Redis.Client.SMembers(filterAMembers).Result()
+		if err != nil {
+			return filterASet, err
+		}
+
+		filterASet.FromSlice(filterA)
 		return filterASet, nil
 	}
 
-	return filterASet.Intersection(filterBSet), nil
+	if r["FilterA"] == "wildcard" {
+		exists, err := h.Redis.Client.Exists(filterBDesc).Result()
+		if err != nil {
+			return filterASet, err
+		}
+
+		if exists == 0 {
+			return filterASet, fmt.Errorf("Filter `%s` doesn't exists.", r["FilterB"])
+		}
+
+		filterB, err := h.Redis.Client.SMembers(filterBMembers).Result()
+		if err != nil {
+			return filterASet, err
+		}
+
+		filterBSet.FromSlice(filterB)
+		return filterBSet, nil
+	}
+
+	filterInter, err := h.Redis.Client.SInter(filterAMembers, filterBMembers).Result()
+	if err != nil {
+		return filterASet, err
+	}
+
+	filterASet.FromSlice(filterInter)
+	return filterASet, errors.New("Something went very, very wrong.")
 }
 
 func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.SyncRequest, response *rolesrv.RoleSyncResponse) error {
