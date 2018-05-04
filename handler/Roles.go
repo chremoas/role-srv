@@ -17,6 +17,7 @@ import (
 	"strings"
 	"go.uber.org/zap"
 	common "github.com/chremoas/services-common/command"
+	"time"
 )
 
 type rolesHandler struct {
@@ -298,7 +299,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string) error {
 	ctx := context.Background()
 	sugar := h.Logger.Sugar()
 	sugar.Info("Starting syncMembers()")
-	h.sendMessage(ctx, channelId, common.SendSuccess("Starting syncMembers()"))
+	h.sendMessage(ctx, channelId, common.SendSuccess("Starting member sync"))
 	var roleNameMap = make(map[string]string)
 	var membershipSets = make(map[string]*sets.StringSet)
 
@@ -307,10 +308,12 @@ func (h *rolesHandler) syncMembers(channelId, userId string) error {
 	var memberCount = 1
 	var memberId = ""
 
+	h.sendMessage(ctx, channelId, common.SendSuccess("Getting all Discord members"))
 	// Need to pre-populate the membership sets with all the users so we can pick up users with no roles.
 	for memberCount > 0 {
-		members, err := clients.discord.GetAllMembers(ctx, &discord.GetAllMembersRequest{NumberPerPage: numberPerPage, After: memberId})
+		longCtx, _ := context.WithTimeout(context.Background(), time.Minute * 5)
 
+		members, err := clients.discord.GetAllMembers(longCtx, &discord.GetAllMembersRequest{NumberPerPage: numberPerPage, After: memberId})
 		if err != nil {
 			msg := fmt.Sprintf("syncMembers: GetAllMembers: %s", err.Error())
 			h.sendMessage(ctx, channelId, common.SendFatal(msg))
@@ -332,6 +335,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string) error {
 		memberCount = len(members.Members)
 	}
 
+	h.sendMessage(ctx, channelId, common.SendSuccess("Getting all Discord roles"))
 	// Get all the Roles from discord and create a map of their name to theid Id
 	discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
 	if err != nil {
@@ -345,6 +349,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string) error {
 		roleNameMap[discordRoles.Roles[d].Name] = discordRoles.Roles[d].Id
 	}
 
+	h.sendMessage(ctx, channelId, common.SendSuccess("Getting all Chremoas roles"))
 	// Get all the Chremoas roles and build membership Sets
 	chremoasRoles, err := h.getRoles()
 	if err != nil {
@@ -354,6 +359,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string) error {
 		return err
 	}
 
+	h.sendMessage(ctx, channelId, common.SendSuccess("Getting all role membership"))
 	for r := range chremoasRoles {
 		membership, err := h.getRoleMembership(chremoasRoles[r])
 		if err != nil {
@@ -378,6 +384,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string) error {
 		}
 	}
 
+	h.sendMessage(ctx, channelId, common.SendSuccess("Updating Discord Roles"))
 	// Apply the membership sets to discord overwriting anything that's there.
 	for m := range membershipSets {
 		clients.discord.UpdateMember(ctx, &discord.UpdateMemberRequest{
