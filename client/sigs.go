@@ -8,15 +8,23 @@ import (
 	"strings"
 )
 
+func (r Roles) AddSIG(ctx context.Context, sender, sig string) string {
+	return r.sigAction(ctx, sender, sig, true, false)
+}
+
+func (r Roles) RemoveSIG(ctx context.Context, sender, sig string) string {
+	return r.sigAction(ctx, sender, sig, false, false)
+}
+
 func (r Roles) JoinSIG(ctx context.Context, sender, sig string) string {
-	return r.sigAction(ctx, sender, sig, true)
+	return r.sigAction(ctx, sender, sig, true, true)
 }
 
 func (r Roles) LeaveSIG(ctx context.Context, sender, sig string) string {
-	return r.sigAction(ctx, sender, sig, false)
+	return r.sigAction(ctx, sender, sig, false, true)
 }
 
-func (r Roles) sigAction(ctx context.Context, sender, sig string, join bool) string {
+func (r Roles) sigAction(ctx context.Context, sender, sig string, join, joinable bool) string {
 	s := strings.Split(sender, ":")
 
 	foo, err := r.RoleClient.GetRole(ctx, &rolesrv.Role{ShortName: sig})
@@ -34,9 +42,11 @@ func (r Roles) sigAction(ctx context.Context, sender, sig string, join bool) str
 		return common.SendError(err.Error())
 	}
 
-	// Is this a joinable role?
-	if !role.Joinable {
-		return common.SendError(fmt.Sprintf("'%s' is not a joinable SIG, talk to an admin", sig))
+	// Is this a joinable role? Only check on Join/Leave not Add/Remove
+	if joinable {
+		if !role.Joinable {
+			return common.SendError(fmt.Sprintf("'%s' is not a joinable SIG, talk to an admin", sig))
+		}
 	}
 
 	// add member to role
