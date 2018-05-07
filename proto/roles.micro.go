@@ -9,6 +9,8 @@ It is generated from these files:
 
 It has these top-level messages:
 	NilMessage
+	GetDiscordUserRequest
+	GetDiscordUserResponse
 	SyncRequest
 	StringList
 	Role
@@ -66,6 +68,7 @@ type RolesService interface {
 	GetMembers(ctx context.Context, in *Filter, opts ...client.CallOption) (*MemberList, error)
 	AddMembers(ctx context.Context, in *Members, opts ...client.CallOption) (*NilMessage, error)
 	RemoveMembers(ctx context.Context, in *Members, opts ...client.CallOption) (*NilMessage, error)
+	GetDiscordUser(ctx context.Context, in *GetDiscordUserRequest, opts ...client.CallOption) (*GetDiscordUserResponse, error)
 }
 
 type rolesService struct {
@@ -236,6 +239,16 @@ func (c *rolesService) RemoveMembers(ctx context.Context, in *Members, opts ...c
 	return out, nil
 }
 
+func (c *rolesService) GetDiscordUser(ctx context.Context, in *GetDiscordUserRequest, opts ...client.CallOption) (*GetDiscordUserResponse, error) {
+	req := c.c.NewRequest(c.name, "Roles.GetDiscordUser", in)
+	out := new(GetDiscordUserResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Roles service
 
 type RolesHandler interface {
@@ -254,6 +267,7 @@ type RolesHandler interface {
 	GetMembers(context.Context, *Filter, *MemberList) error
 	AddMembers(context.Context, *Members, *NilMessage) error
 	RemoveMembers(context.Context, *Members, *NilMessage) error
+	GetDiscordUser(context.Context, *GetDiscordUserRequest, *GetDiscordUserResponse) error
 }
 
 func RegisterRolesHandler(s server.Server, hdlr RolesHandler, opts ...server.HandlerOption) {
@@ -273,6 +287,7 @@ func RegisterRolesHandler(s server.Server, hdlr RolesHandler, opts ...server.Han
 		GetMembers(ctx context.Context, in *Filter, out *MemberList) error
 		AddMembers(ctx context.Context, in *Members, out *NilMessage) error
 		RemoveMembers(ctx context.Context, in *Members, out *NilMessage) error
+		GetDiscordUser(ctx context.Context, in *GetDiscordUserRequest, out *GetDiscordUserResponse) error
 	}
 	type Roles struct {
 		roles
@@ -343,4 +358,8 @@ func (h *rolesHandler) AddMembers(ctx context.Context, in *Members, out *NilMess
 
 func (h *rolesHandler) RemoveMembers(ctx context.Context, in *Members, out *NilMessage) error {
 	return h.RolesHandler.RemoveMembers(ctx, in, out)
+}
+
+func (h *rolesHandler) GetDiscordUser(ctx context.Context, in *GetDiscordUserRequest, out *GetDiscordUserResponse) error {
+	return h.RolesHandler.GetDiscordUser(ctx, in, out)
 }

@@ -20,9 +20,25 @@ service Roles {
     rpc GetMembers (Filter) returns (MemberList) {};
     rpc AddMembers (Members) returns (NilMessage) {};
     rpc RemoveMembers (Members) returns (NilMessage) {};
+
+    rpc GetDiscordUser (GetDiscordUserRequest) returns (GetDiscordUserResponse) {};
 }
 
 message NilMessage {}
+
+message GetDiscordUserRequest {
+    string UserId = 1;
+}
+
+message GetDiscordUserResponse {
+    string Username	= 1;
+    string Discriminator = 2;
+    string Avatar = 3;
+    bool Bot = 4;
+    bool MfaEnabled = 5;
+    bool Verified = 6;
+    string Email = 7;
+}
 
 message SyncRequest {
     string ChannelId = 1;

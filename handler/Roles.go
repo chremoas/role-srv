@@ -687,11 +687,6 @@ func (h *rolesHandler) RemoveMembers(ctx context.Context, request *rolesrv.Membe
 		return fmt.Errorf("Filter `%s` doesn't exists.", request.Filter)
 	}
 
-	//isMember, err := h.Redis.Client.SIsMember(filterName, request.Name).Result()
-	//if !isMember {
-	//	return fmt.Errorf("`%s` not a member of filter '%s'", request.Name, request.Filter)
-	//}
-
 	for member := range request.Name {
 		_, err = h.Redis.Client.SRem(filterName, request.Name[member]).Result()
 	}
@@ -701,5 +696,22 @@ func (h *rolesHandler) RemoveMembers(ctx context.Context, request *rolesrv.Membe
 	}
 
 	response = &rolesrv.NilMessage{}
+	return nil
+}
+
+func (h *rolesHandler) GetDiscordUser(ctx context.Context, request *rolesrv.GetDiscordUserRequest, response *rolesrv.GetDiscordUserResponse) error {
+	user, err := clients.discord.GetUser(ctx, &discord.GetUserRequest{UserId: request.UserId})
+	if err != nil {
+		return err
+	}
+
+	response.Username = user.User.Username
+	response.Avatar = user.User.Avatar
+	response.Bot = user.User.Bot
+	response.Discriminator = user.User.Discriminator
+	response.Email = user.User.Email
+	response.MfaEnabled = user.User.MFAEnabled
+	response.Verified = user.User.Verified
+
 	return nil
 }
