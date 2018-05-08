@@ -408,6 +408,19 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	return nil
 }
 
+func (h *rolesHandler) GetRoleMembership(ctx context.Context, request *rolesrv.RoleMembershipRequest, response *rolesrv.RoleMembershipResponse) error {
+	members, err := h.getRoleMembership(request.Name)
+	if err != nil {
+		return err
+	}
+
+	for m := range members.Set {
+		response.Members = append(response.Members, m)
+	}
+
+	return nil
+}
+
 func (h *rolesHandler) getRoleMembership(role string) (members *sets.StringSet, err error) {
 	var filterASet = sets.NewStringSet()
 	var filterBSet = sets.NewStringSet()
@@ -712,7 +725,9 @@ func (h *rolesHandler) GetMembers(ctx context.Context, request *rolesrv.Filter, 
 	}
 
 	for filter := range filters {
-		memberlist = append(memberlist, filters[filter])
+		if len(filters[filter]) > 0 {
+			memberlist = append(memberlist, filters[filter])
+		}
 	}
 
 	response.Members = memberlist

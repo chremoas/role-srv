@@ -203,3 +203,28 @@ func (r Roles) Set(ctx context.Context, sender, name, key, value string) string 
 
 	return common.SendSuccess(fmt.Sprintf("Set '%s' to '%s' for '%s'", key, value, name))
 }
+
+func (r Roles) GetMembers(ctx context.Context, role string) string {
+	var buffer bytes.Buffer
+
+	members, err := r.RoleClient.GetRoleMembership(ctx, &rolesrv.RoleMembershipRequest{Name: role})
+	if err != nil {
+		return common.SendFatal(err.Error())
+	}
+
+	for m := range members.Members {
+		if len(members.Members[m]) > 0 {
+			user, err := r.RoleClient.GetDiscordUser(ctx, &rolesrv.GetDiscordUserRequest{UserId: members.Members[m]})
+			if err != nil {
+				return common.SendError(err.Error())
+			}
+			buffer.WriteString(fmt.Sprintf("\t%s\n", user.Username))
+		}
+	}
+
+	if buffer.Len() == 0 {
+		return "```Empty list```\n"
+	}
+
+	return fmt.Sprintf("```%s Members:\n%s```\n", role, buffer.String())
+}

@@ -11,6 +11,7 @@ service Roles {
     rpc GetRoleKeys (NilMessage) returns (StringList) {};
     rpc GetRoleTypes (NilMessage) returns (StringList) {};
     rpc SyncRoles (SyncRequest) returns (NilMessage) {};
+    rpc GetRoleMembership (RoleMembershipRequest) returns (RoleMembershipResponse) {};
 
     rpc GetFilters (NilMessage) returns (FilterList) {};
     rpc AddFilter (Filter) returns (NilMessage) {};
@@ -25,6 +26,14 @@ service Roles {
 }
 
 message NilMessage {}
+
+message RoleMembershipRequest {
+    string Name = 1;
+}
+
+message RoleMembershipResponse {
+    repeated string Members = 1;
+}
 
 message GetDiscordUserRequest {
     string UserId = 1;

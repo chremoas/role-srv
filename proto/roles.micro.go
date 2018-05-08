@@ -9,6 +9,8 @@ It is generated from these files:
 
 It has these top-level messages:
 	NilMessage
+	RoleMembershipRequest
+	RoleMembershipResponse
 	GetDiscordUserRequest
 	GetDiscordUserResponse
 	SyncRequest
@@ -60,6 +62,7 @@ type RolesService interface {
 	GetRoleKeys(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*StringList, error)
 	GetRoleTypes(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*StringList, error)
 	SyncRoles(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*NilMessage, error)
+	GetRoleMembership(ctx context.Context, in *RoleMembershipRequest, opts ...client.CallOption) (*RoleMembershipResponse, error)
 	GetFilters(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*FilterList, error)
 	AddFilter(ctx context.Context, in *Filter, opts ...client.CallOption) (*NilMessage, error)
 	RemoveFilter(ctx context.Context, in *Filter, opts ...client.CallOption) (*NilMessage, error)
@@ -168,6 +171,16 @@ func (c *rolesService) SyncRoles(ctx context.Context, in *SyncRequest, opts ...c
 	return out, nil
 }
 
+func (c *rolesService) GetRoleMembership(ctx context.Context, in *RoleMembershipRequest, opts ...client.CallOption) (*RoleMembershipResponse, error) {
+	req := c.c.NewRequest(c.name, "Roles.GetRoleMembership", in)
+	out := new(RoleMembershipResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *rolesService) GetFilters(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*FilterList, error) {
 	req := c.c.NewRequest(c.name, "Roles.GetFilters", in)
 	out := new(FilterList)
@@ -259,6 +272,7 @@ type RolesHandler interface {
 	GetRoleKeys(context.Context, *NilMessage, *StringList) error
 	GetRoleTypes(context.Context, *NilMessage, *StringList) error
 	SyncRoles(context.Context, *SyncRequest, *NilMessage) error
+	GetRoleMembership(context.Context, *RoleMembershipRequest, *RoleMembershipResponse) error
 	GetFilters(context.Context, *NilMessage, *FilterList) error
 	AddFilter(context.Context, *Filter, *NilMessage) error
 	RemoveFilter(context.Context, *Filter, *NilMessage) error
@@ -279,6 +293,7 @@ func RegisterRolesHandler(s server.Server, hdlr RolesHandler, opts ...server.Han
 		GetRoleKeys(ctx context.Context, in *NilMessage, out *StringList) error
 		GetRoleTypes(ctx context.Context, in *NilMessage, out *StringList) error
 		SyncRoles(ctx context.Context, in *SyncRequest, out *NilMessage) error
+		GetRoleMembership(ctx context.Context, in *RoleMembershipRequest, out *RoleMembershipResponse) error
 		GetFilters(ctx context.Context, in *NilMessage, out *FilterList) error
 		AddFilter(ctx context.Context, in *Filter, out *NilMessage) error
 		RemoveFilter(ctx context.Context, in *Filter, out *NilMessage) error
@@ -329,6 +344,10 @@ func (h *rolesHandler) GetRoleTypes(ctx context.Context, in *NilMessage, out *St
 
 func (h *rolesHandler) SyncRoles(ctx context.Context, in *SyncRequest, out *NilMessage) error {
 	return h.RolesHandler.SyncRoles(ctx, in, out)
+}
+
+func (h *rolesHandler) GetRoleMembership(ctx context.Context, in *RoleMembershipRequest, out *RoleMembershipResponse) error {
+	return h.RolesHandler.GetRoleMembership(ctx, in, out)
 }
 
 func (h *rolesHandler) GetFilters(ctx context.Context, in *NilMessage, out *FilterList) error {
