@@ -186,7 +186,7 @@ func (r Roles) Set(ctx context.Context, sender, name, key, value string) string 
 
 	if key == "Color" {
 		if string(value[0]) == "#" {
-			i, _ := strconv.ParseInt(fmt.Sprintf("0x%s", value[1:]), 0, 64)
+			i, _ := strconv.ParseInt(value[1:], 16, 64)
 			value = strconv.Itoa(int(i))
 		}
 	}

@@ -342,7 +342,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	}
 
 	h.sendMessage(ctx, channelId, common.SendSuccess("Getting all Discord roles"), sendMessage)
-	// Get all the Roles from discord and create a map of their name to theid Id
+	// Get all the Roles from discord and create a map of their name to their Id
 	discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
 	if err != nil {
 		msg := fmt.Sprintf("syncMembers: GetAllRoles: %s", err.Error())
@@ -367,6 +367,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 
 	h.sendMessage(ctx, channelId, common.SendSuccess("Getting all role membership"), sendMessage)
 	for r := range chremoasRoles {
+		fmt.Printf("Checking role: %s\n", chremoasRoles[r])
 		membership, err := h.getRoleMembership(chremoasRoles[r])
 		if err != nil {
 			msg := fmt.Sprintf("syncMembers: getRoleMembership: %s", err.Error())
@@ -386,7 +387,9 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 		roleId := roleNameMap[roleName["Name"]]
 
 		for m := range membership.Set {
-			membershipSets[m].Add(roleId)
+			if len(m) > 0 {
+				membershipSets[m].Add(roleId)
+			}
 		}
 	}
 
@@ -580,8 +583,6 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 		mention, _ := strconv.ParseBool(chremoasRoleData[r]["Mentionable"])
 		managed, _ := strconv.ParseBool(chremoasRoleData[r]["Managed"])
 
-		fmt.Printf("GRR: color=%d perm=%d position=%d hoist=%t mention=%t managed=%t\n", color, perm, position, hoist, mention, managed)
-
 		editRequest := &discord.EditRoleRequest{
 			Name:    chremoasRoleData[r]["Name"],
 			Color:   color,
@@ -591,8 +592,6 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 			Mention: mention,
 			Managed: managed,
 		}
-
-		fmt.Printf("editRequest: %+v\n", editRequest)
 
 		longCtx, _ := context.WithTimeout(ctx, time.Minute * 5)
 		_, err := clients.discord.EditRole(longCtx, editRequest)
