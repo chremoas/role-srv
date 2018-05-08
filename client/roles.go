@@ -8,6 +8,8 @@ import (
 	rolesrv "github.com/chremoas/role-srv/proto"
 	common "github.com/chremoas/services-common/command"
 	"go.uber.org/zap"
+	"github.com/chremoas/services-common/sets"
+	"strconv"
 )
 
 type Roles struct {
@@ -82,7 +84,7 @@ func (r Roles) AddRole(ctx context.Context, sender, shortName, roleType, filterA
 		return common.SendFatal(err.Error())
 	}
 
-	_, err = r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender))
+	_, err = r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender, false))
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -115,7 +117,7 @@ func (r Roles) RemoveRole(ctx context.Context, sender, shortName string, sig boo
 		return common.SendFatal(err.Error())
 	}
 
-	_, err = r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender))
+	_, err = r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender, false))
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -160,33 +162,44 @@ func (r Roles) RoleInfo(ctx context.Context, sender, shortName string, sig bool)
 
 func (r Roles) SyncRoles(ctx context.Context, sender string) string {
 	r.Logger.Info("Calling SyncRoles()")
-	var buffer bytes.Buffer
-	response, err := r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender))
 
+	_, err := r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender, true))
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
 
-	r.Logger.Info(fmt.Sprintf("Added: %v", response.Added))
+	return common.SendSuccess("Done")
+}
 
-	if len(response.Added) == 0 {
-		buffer.WriteString("No roles to add")
-	} else {
-		buffer.WriteString("Adding:\n")
-		for r := range response.Added {
-			buffer.WriteString(fmt.Sprintf("\t%s\n", response.Added[r]))
+func (r Roles) Set(ctx context.Context, sender, name, key, value string) string {
+	var validKeys = sets.NewStringSet()
+	validKeys.FromSlice([]string{"Color", "Hoist", "Position", "Permissions", "Managed", "Mentionable"})
+
+	if !validKeys.Contains(key) {
+		var buffer bytes.Buffer
+		buffer.WriteString(fmt.Sprintf("Unknown key: %s\nValid Options are:\n", key))
+		for k := range validKeys.Set {
+			buffer.WriteString(fmt.Sprintf("\t%s\n", k))
+		}
+		return common.SendError(buffer.String())
+	}
+
+	if key == "Color" {
+		if string(value[0]) == "#" {
+			i, _ := strconv.ParseInt(fmt.Sprintf("0x%s", value[1:]), 0, 64)
+			value = strconv.Itoa(int(i))
 		}
 	}
 
-	r.Logger.Info(fmt.Sprintf("Removed: %v", response.Added))
-	if len(response.Removed) == 0 {
-		buffer.WriteString("\nNo roles to remove")
-	} else {
-		buffer.WriteString("\nRemoving:\n")
-		for r := range response.Removed {
-			buffer.WriteString(fmt.Sprintf("\t%s\n", response.Removed[r]))
-		}
+	_, err := r.RoleClient.UpdateRole(ctx, &rolesrv.UpdateInfo{Name: name, Key: key, Value: value})
+	if err != nil {
+		return common.SendFatal(err.Error())
 	}
 
-	return fmt.Sprintf("```%s\n```", buffer.String())
+	_, err = r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender, false))
+	if err != nil {
+		return common.SendFatal(err.Error())
+	}
+
+	return common.SendSuccess(fmt.Sprintf("Set '%s' to '%s' for '%s'", key, value, name))
 }

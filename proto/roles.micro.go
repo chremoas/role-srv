@@ -59,7 +59,6 @@ type RolesService interface {
 	GetRole(ctx context.Context, in *Role, opts ...client.CallOption) (*Role, error)
 	GetRoleKeys(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*StringList, error)
 	GetRoleTypes(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*StringList, error)
-	SyncMembers(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*NilMessage, error)
 	SyncRoles(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*NilMessage, error)
 	GetFilters(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*FilterList, error)
 	AddFilter(ctx context.Context, in *Filter, opts ...client.CallOption) (*NilMessage, error)
@@ -67,6 +66,7 @@ type RolesService interface {
 	GetMembers(ctx context.Context, in *Filter, opts ...client.CallOption) (*MemberList, error)
 	AddMembers(ctx context.Context, in *Members, opts ...client.CallOption) (*NilMessage, error)
 	RemoveMembers(ctx context.Context, in *Members, opts ...client.CallOption) (*NilMessage, error)
+	SyncMembers(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*NilMessage, error)
 	GetDiscordUser(ctx context.Context, in *GetDiscordUserRequest, opts ...client.CallOption) (*GetDiscordUserResponse, error)
 }
 
@@ -158,16 +158,6 @@ func (c *rolesService) GetRoleTypes(ctx context.Context, in *NilMessage, opts ..
 	return out, nil
 }
 
-func (c *rolesService) SyncMembers(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*NilMessage, error) {
-	req := c.c.NewRequest(c.name, "Roles.SyncMembers", in)
-	out := new(NilMessage)
-	err := c.c.Call(ctx, req, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *rolesService) SyncRoles(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*NilMessage, error) {
 	req := c.c.NewRequest(c.name, "Roles.SyncRoles", in)
 	out := new(NilMessage)
@@ -238,6 +228,16 @@ func (c *rolesService) RemoveMembers(ctx context.Context, in *Members, opts ...c
 	return out, nil
 }
 
+func (c *rolesService) SyncMembers(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*NilMessage, error) {
+	req := c.c.NewRequest(c.name, "Roles.SyncMembers", in)
+	out := new(NilMessage)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *rolesService) GetDiscordUser(ctx context.Context, in *GetDiscordUserRequest, opts ...client.CallOption) (*GetDiscordUserResponse, error) {
 	req := c.c.NewRequest(c.name, "Roles.GetDiscordUser", in)
 	out := new(GetDiscordUserResponse)
@@ -258,7 +258,6 @@ type RolesHandler interface {
 	GetRole(context.Context, *Role, *Role) error
 	GetRoleKeys(context.Context, *NilMessage, *StringList) error
 	GetRoleTypes(context.Context, *NilMessage, *StringList) error
-	SyncMembers(context.Context, *SyncRequest, *NilMessage) error
 	SyncRoles(context.Context, *SyncRequest, *NilMessage) error
 	GetFilters(context.Context, *NilMessage, *FilterList) error
 	AddFilter(context.Context, *Filter, *NilMessage) error
@@ -266,6 +265,7 @@ type RolesHandler interface {
 	GetMembers(context.Context, *Filter, *MemberList) error
 	AddMembers(context.Context, *Members, *NilMessage) error
 	RemoveMembers(context.Context, *Members, *NilMessage) error
+	SyncMembers(context.Context, *SyncRequest, *NilMessage) error
 	GetDiscordUser(context.Context, *GetDiscordUserRequest, *GetDiscordUserResponse) error
 }
 
@@ -278,7 +278,6 @@ func RegisterRolesHandler(s server.Server, hdlr RolesHandler, opts ...server.Han
 		GetRole(ctx context.Context, in *Role, out *Role) error
 		GetRoleKeys(ctx context.Context, in *NilMessage, out *StringList) error
 		GetRoleTypes(ctx context.Context, in *NilMessage, out *StringList) error
-		SyncMembers(ctx context.Context, in *SyncRequest, out *NilMessage) error
 		SyncRoles(ctx context.Context, in *SyncRequest, out *NilMessage) error
 		GetFilters(ctx context.Context, in *NilMessage, out *FilterList) error
 		AddFilter(ctx context.Context, in *Filter, out *NilMessage) error
@@ -286,6 +285,7 @@ func RegisterRolesHandler(s server.Server, hdlr RolesHandler, opts ...server.Han
 		GetMembers(ctx context.Context, in *Filter, out *MemberList) error
 		AddMembers(ctx context.Context, in *Members, out *NilMessage) error
 		RemoveMembers(ctx context.Context, in *Members, out *NilMessage) error
+		SyncMembers(ctx context.Context, in *SyncRequest, out *NilMessage) error
 		GetDiscordUser(ctx context.Context, in *GetDiscordUserRequest, out *GetDiscordUserResponse) error
 	}
 	type Roles struct {
@@ -327,10 +327,6 @@ func (h *rolesHandler) GetRoleTypes(ctx context.Context, in *NilMessage, out *St
 	return h.RolesHandler.GetRoleTypes(ctx, in, out)
 }
 
-func (h *rolesHandler) SyncMembers(ctx context.Context, in *SyncRequest, out *NilMessage) error {
-	return h.RolesHandler.SyncMembers(ctx, in, out)
-}
-
 func (h *rolesHandler) SyncRoles(ctx context.Context, in *SyncRequest, out *NilMessage) error {
 	return h.RolesHandler.SyncRoles(ctx, in, out)
 }
@@ -357,6 +353,10 @@ func (h *rolesHandler) AddMembers(ctx context.Context, in *Members, out *NilMess
 
 func (h *rolesHandler) RemoveMembers(ctx context.Context, in *Members, out *NilMessage) error {
 	return h.RolesHandler.RemoveMembers(ctx, in, out)
+}
+
+func (h *rolesHandler) SyncMembers(ctx context.Context, in *SyncRequest, out *NilMessage) error {
+	return h.RolesHandler.SyncMembers(ctx, in, out)
 }
 
 func (h *rolesHandler) GetDiscordUser(ctx context.Context, in *GetDiscordUserRequest, out *GetDiscordUserResponse) error {

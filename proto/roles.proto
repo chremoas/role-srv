@@ -10,7 +10,6 @@ service Roles {
     rpc GetRole (Role) returns (Role) {};
     rpc GetRoleKeys (NilMessage) returns (StringList) {};
     rpc GetRoleTypes (NilMessage) returns (StringList) {};
-    rpc SyncMembers (SyncRequest) returns (NilMessage) {};
     rpc SyncRoles (SyncRequest) returns (NilMessage) {};
 
     rpc GetFilters (NilMessage) returns (FilterList) {};
@@ -20,6 +19,7 @@ service Roles {
     rpc GetMembers (Filter) returns (MemberList) {};
     rpc AddMembers (Members) returns (NilMessage) {};
     rpc RemoveMembers (Members) returns (NilMessage) {};
+    rpc SyncMembers (SyncRequest) returns (NilMessage) {};
 
     rpc GetDiscordUser (GetDiscordUserRequest) returns (GetDiscordUserResponse) {};
 }
