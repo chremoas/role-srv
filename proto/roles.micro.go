@@ -16,7 +16,6 @@ It has these top-level messages:
 	Role
 	UpdateInfo
 	GetRolesResponse
-	RoleSyncResponse
 	FilterList
 	Filter
 	Members
@@ -58,10 +57,10 @@ type RolesService interface {
 	RemoveRole(ctx context.Context, in *Role, opts ...client.CallOption) (*NilMessage, error)
 	GetRoles(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*GetRolesResponse, error)
 	GetRole(ctx context.Context, in *Role, opts ...client.CallOption) (*Role, error)
-	SyncRoles(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*RoleSyncResponse, error)
 	GetRoleKeys(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*StringList, error)
 	GetRoleTypes(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*StringList, error)
 	SyncMembers(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*NilMessage, error)
+	SyncRoles(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*NilMessage, error)
 	GetFilters(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*FilterList, error)
 	AddFilter(ctx context.Context, in *Filter, opts ...client.CallOption) (*NilMessage, error)
 	RemoveFilter(ctx context.Context, in *Filter, opts ...client.CallOption) (*NilMessage, error)
@@ -139,16 +138,6 @@ func (c *rolesService) GetRole(ctx context.Context, in *Role, opts ...client.Cal
 	return out, nil
 }
 
-func (c *rolesService) SyncRoles(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*RoleSyncResponse, error) {
-	req := c.c.NewRequest(c.name, "Roles.SyncRoles", in)
-	out := new(RoleSyncResponse)
-	err := c.c.Call(ctx, req, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *rolesService) GetRoleKeys(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*StringList, error) {
 	req := c.c.NewRequest(c.name, "Roles.GetRoleKeys", in)
 	out := new(StringList)
@@ -171,6 +160,16 @@ func (c *rolesService) GetRoleTypes(ctx context.Context, in *NilMessage, opts ..
 
 func (c *rolesService) SyncMembers(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*NilMessage, error) {
 	req := c.c.NewRequest(c.name, "Roles.SyncMembers", in)
+	out := new(NilMessage)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rolesService) SyncRoles(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*NilMessage, error) {
+	req := c.c.NewRequest(c.name, "Roles.SyncRoles", in)
 	out := new(NilMessage)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
@@ -257,10 +256,10 @@ type RolesHandler interface {
 	RemoveRole(context.Context, *Role, *NilMessage) error
 	GetRoles(context.Context, *NilMessage, *GetRolesResponse) error
 	GetRole(context.Context, *Role, *Role) error
-	SyncRoles(context.Context, *SyncRequest, *RoleSyncResponse) error
 	GetRoleKeys(context.Context, *NilMessage, *StringList) error
 	GetRoleTypes(context.Context, *NilMessage, *StringList) error
 	SyncMembers(context.Context, *SyncRequest, *NilMessage) error
+	SyncRoles(context.Context, *SyncRequest, *NilMessage) error
 	GetFilters(context.Context, *NilMessage, *FilterList) error
 	AddFilter(context.Context, *Filter, *NilMessage) error
 	RemoveFilter(context.Context, *Filter, *NilMessage) error
@@ -277,10 +276,10 @@ func RegisterRolesHandler(s server.Server, hdlr RolesHandler, opts ...server.Han
 		RemoveRole(ctx context.Context, in *Role, out *NilMessage) error
 		GetRoles(ctx context.Context, in *NilMessage, out *GetRolesResponse) error
 		GetRole(ctx context.Context, in *Role, out *Role) error
-		SyncRoles(ctx context.Context, in *SyncRequest, out *RoleSyncResponse) error
 		GetRoleKeys(ctx context.Context, in *NilMessage, out *StringList) error
 		GetRoleTypes(ctx context.Context, in *NilMessage, out *StringList) error
 		SyncMembers(ctx context.Context, in *SyncRequest, out *NilMessage) error
+		SyncRoles(ctx context.Context, in *SyncRequest, out *NilMessage) error
 		GetFilters(ctx context.Context, in *NilMessage, out *FilterList) error
 		AddFilter(ctx context.Context, in *Filter, out *NilMessage) error
 		RemoveFilter(ctx context.Context, in *Filter, out *NilMessage) error
@@ -320,10 +319,6 @@ func (h *rolesHandler) GetRole(ctx context.Context, in *Role, out *Role) error {
 	return h.RolesHandler.GetRole(ctx, in, out)
 }
 
-func (h *rolesHandler) SyncRoles(ctx context.Context, in *SyncRequest, out *RoleSyncResponse) error {
-	return h.RolesHandler.SyncRoles(ctx, in, out)
-}
-
 func (h *rolesHandler) GetRoleKeys(ctx context.Context, in *NilMessage, out *StringList) error {
 	return h.RolesHandler.GetRoleKeys(ctx, in, out)
 }
@@ -334,6 +329,10 @@ func (h *rolesHandler) GetRoleTypes(ctx context.Context, in *NilMessage, out *St
 
 func (h *rolesHandler) SyncMembers(ctx context.Context, in *SyncRequest, out *NilMessage) error {
 	return h.RolesHandler.SyncMembers(ctx, in, out)
+}
+
+func (h *rolesHandler) SyncRoles(ctx context.Context, in *SyncRequest, out *NilMessage) error {
+	return h.RolesHandler.SyncRoles(ctx, in, out)
 }
 
 func (h *rolesHandler) GetFilters(ctx context.Context, in *NilMessage, out *FilterList) error {

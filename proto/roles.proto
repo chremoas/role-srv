@@ -8,10 +8,10 @@ service Roles {
     rpc RemoveRole (Role) returns (NilMessage) {};
     rpc GetRoles (NilMessage) returns (GetRolesResponse) {};
     rpc GetRole (Role) returns (Role) {};
-    rpc SyncRoles (SyncRequest) returns (RoleSyncResponse) {};
     rpc GetRoleKeys (NilMessage) returns (StringList) {};
     rpc GetRoleTypes (NilMessage) returns (StringList) {};
     rpc SyncMembers (SyncRequest) returns (NilMessage) {};
+    rpc SyncRoles (SyncRequest) returns (NilMessage) {};
 
     rpc GetFilters (NilMessage) returns (FilterList) {};
     rpc AddFilter (Filter) returns (NilMessage) {};
@@ -76,11 +76,6 @@ message UpdateInfo {
 
 message GetRolesResponse {
     repeated Role Roles = 1;
-}
-
-message RoleSyncResponse {
-    repeated string Added = 1;
-    repeated string Removed = 2;
 }
 
 message FilterList {

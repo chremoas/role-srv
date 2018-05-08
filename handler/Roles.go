@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type rolesHandler struct {
@@ -468,14 +469,27 @@ func (h *rolesHandler) getRoleMembership(role string) (members *sets.StringSet, 
 	return filterASet, nil
 }
 
-func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.SyncRequest, response *rolesrv.RoleSyncResponse) error {
+func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.SyncRequest, response *rolesrv.NilMessage) error {
+	go h.syncRoles(request.ChannelId, request.UserId, request.SendMessage)
+	return nil
+}
+
+func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) error {
+	ctx := context.Background()
 	var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
 	chremoasRoleSet := sets.NewStringSet()
 	discordRoleSet := sets.NewStringSet()
 	sugar := h.Logger.Sugar()
+	var chremoasRoleData = make(map[string]map[string]string)
+
+	h.sendMessage(ctx, channelId, common.SendSuccess("Starting Role Sync"), sendMessage)
+	sugar.Info("syncRoles: Starting Role Sync")
 
 	chremoasRoles, err := h.getRoles()
 	if err != nil {
+		msg := fmt.Sprintf("syncRoles: h.getRoles(): %s", err.Error())
+		h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+		sugar.Error(msg)
 		return err
 	}
 
@@ -484,14 +498,26 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.SyncReque
 		c, err := h.Redis.Client.HGetAll(roleName).Result()
 
 		if err != nil {
+			msg := fmt.Sprintf("syncRoles: HGetAll(): %s", err.Error())
+			h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+			sugar.Error(msg)
 			return err
 		}
 
 		chremoasRoleSet.Add(c["Name"])
+
+		if mm, ok := chremoasRoleData[c["Name"]]; !ok {
+			mm = make(map[string]string)
+			chremoasRoleData[c["Name"]] = mm
+		}
+		chremoasRoleData[c["Name"]] = c
 	}
 
 	discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
 	if err != nil {
+		msg := fmt.Sprintf("syncRoles: GetAllRoles: %s", err.Error())
+		h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+		sugar.Error(msg)
 		return err
 	}
 
@@ -507,9 +533,11 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.SyncReque
 
 	toAdd := chremoasRoleSet.Difference(discordRoleSet)
 	toDelete := discordRoleSet.Difference(chremoasRoleSet)
+	toUpdate := discordRoleSet.Intersection(chremoasRoleSet)
 
 	sugar.Infof("toAdd: %v", toAdd)
 	sugar.Infof("toDelete: %v", toDelete)
+	sugar.Infof("toUpdate: %v", toUpdate)
 
 	for r := range toAdd.Set {
 		_, err := clients.discord.CreateRole(ctx, &discord.CreateRoleRequest{Name: r})
@@ -518,23 +546,68 @@ func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.SyncReque
 			if matchDiscordError.MatchString(err.Error()) {
 				// The role list was cached most likely so we'll pretend we didn't try
 				// to create it just now. -brian
+				sugar.Infof("syncRoles added: %s", r)
 				continue
 			} else {
+				msg := fmt.Sprintf("syncRoles: CreateRole(): %s", err.Error())
+				h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+				sugar.Error(msg)
 				return err
 			}
 		}
 
-		response.Added = append(response.Added, r)
+		sugar.Infof("syncRoles added: %s", r)
 	}
 
 	for r := range toDelete.Set {
-		response.Removed = append(response.Removed, r)
 		_, err := clients.discord.DeleteRole(ctx, &discord.DeleteRoleRequest{Name: r})
 
 		if err != nil {
+			msg := fmt.Sprintf("syncRoles: DeleteRole(): %s", err.Error())
+			h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+			sugar.Error(msg)
 			return err
 		}
+
+		sugar.Infof("syncRoles removed: %s", r)
 	}
+
+	for r := range toUpdate.Set {
+		color, _ := strconv.ParseInt(chremoasRoleData[r]["Color"], 10, 64)
+		perm, _ := strconv.ParseInt(chremoasRoleData[r]["Permissions"], 10, 64)
+		position, _ := strconv.ParseInt(chremoasRoleData[r]["Position"], 10, 64)
+		hoist, _ := strconv.ParseBool(chremoasRoleData[r]["Hoist"])
+		mention, _ := strconv.ParseBool(chremoasRoleData[r]["Mentionable"])
+		managed, _ := strconv.ParseBool(chremoasRoleData[r]["Managed"])
+
+		fmt.Printf("GRR: color=%d perm=%d position=%d hoist=%t mention=%t managed=%t\n", color, perm, position, hoist, mention, managed)
+
+		editRequest := &discord.EditRoleRequest{
+			Name:    chremoasRoleData[r]["Name"],
+			Color:   color,
+			Perm:    perm,
+			Position: position,
+			Hoist:   hoist,
+			Mention: mention,
+			Managed: managed,
+		}
+
+		fmt.Printf("editRequest: %+v\n", editRequest)
+
+		longCtx, _ := context.WithTimeout(ctx, time.Minute * 5)
+		_, err := clients.discord.EditRole(longCtx, editRequest)
+		if err != nil {
+			msg := fmt.Sprintf("syncRoles: EditRole(): %s", err.Error())
+			h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+			sugar.Error(msg)
+			return err
+		}
+
+		sugar.Infof("syncRoles updated: %s", r)
+	}
+
+	h.sendMessage(ctx, channelId, common.SendSuccess("Finished Role Sync"), sendMessage)
+	sugar.Info("syncRoles: Finished Role Sync")
 
 	return nil
 }
