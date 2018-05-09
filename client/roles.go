@@ -15,7 +15,7 @@ import (
 type Roles struct {
 	RoleClient  rolesrv.RolesService
 	PermsClient permsrv.PermissionsService
-	Permissions common.Permissions
+	Permissions *common.Permissions
 	Logger      *zap.Logger
 }
 
