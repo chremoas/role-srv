@@ -486,7 +486,9 @@ func (h *rolesHandler) getRoleMembership(role string) (members *sets.StringSet, 
 }
 
 func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.SyncRequest, response *rolesrv.NilMessage) error {
-	go h.syncRoles(request.ChannelId, request.UserId, request.SendMessage)
+	// This was spawning a thread but I think I want to keep this one serialized so that it's guaranteed to finish
+	// before member syncing starts. -brian
+	h.syncRoles(request.ChannelId, request.UserId, request.SendMessage)
 	return nil
 }
 
