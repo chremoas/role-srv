@@ -245,8 +245,17 @@ func (h *rolesHandler) getRoles() ([]string, error) {
 
 func (h *rolesHandler) getRole(name string) (role map[string]string, err error) {
 	roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", name))
-	r, err := h.Redis.Client.HGetAll(roleName).Result()
 
+	exists, err := h.Redis.Client.Exists(roleName).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	if exists == 0 {
+		return nil, fmt.Errorf("role doesn't exist: %s", name)
+	}
+
+	r, err := h.Redis.Client.HGetAll(roleName).Result()
 	if err != nil {
 		return nil, err
 	}
