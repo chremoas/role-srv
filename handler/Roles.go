@@ -401,7 +401,12 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 		roleId := roleNameMap[roleName["Name"]]
 
 		for m := range membership.Set {
+			sugar.Infof("Key is: %s", m)
 			if len(m) != 0 {
+				sugar.Infof("Set is %v", membershipSets[m])
+				if membershipSets[m] == nil {
+					membershipSets[m] = sets.NewStringSet()
+				}
 				membershipSets[m].Add(roleId)
 			}
 		}
