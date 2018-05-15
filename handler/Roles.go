@@ -31,6 +31,8 @@ type clientList struct {
 }
 
 var clients clientList
+var botRole string
+var ignoredRoles []string
 var roleKeys = []string{"Name", "Color", "Hoist", "Position", "Permissions", "Managed", "Mentionable"}
 var roleTypes = []string{"internal", "discord"}
 
@@ -40,6 +42,9 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 	clients = clientList{
 		discord: discord.NewDiscordGatewayService(config.LookupService("gateway", "discord"), c),
 	}
+
+	botRole = config.Bot.BotRole
+	ignoredRoles = config.Bot.IgnoredRoles
 
 	addr := fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port)
 	redisClient := redis.Init(addr, config.Redis.Password, config.Redis.Database, config.LookupService("srv", "perms"))
@@ -396,7 +401,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 		roleId := roleNameMap[roleName["Name"]]
 
 		for m := range membership.Set {
-			if len(m) > 0 {
+			if len(m) != 0 {
 				membershipSets[m].Add(roleId)
 			}
 		}
@@ -549,8 +554,11 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 	}
 
 	ignoreSet := sets.NewStringSet()
-	ignoreSet.Add("Chremoas")
+	ignoreSet.Add(botRole)
 	ignoreSet.Add("@everyone")
+	for i := range ignoredRoles {
+		ignoreSet.Add(ignoredRoles[i])
+	}
 
 	for role := range discordRoles.Roles {
 		if !ignoreSet.Contains(discordRoles.Roles[role].Name) {
@@ -608,16 +616,16 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 		managed, _ := strconv.ParseBool(chremoasRoleData[r]["Managed"])
 
 		editRequest := &discord.EditRoleRequest{
-			Name:    chremoasRoleData[r]["Name"],
-			Color:   color,
-			Perm:    perm,
+			Name:     chremoasRoleData[r]["Name"],
+			Color:    color,
+			Perm:     perm,
 			Position: position,
-			Hoist:   hoist,
-			Mention: mention,
-			Managed: managed,
+			Hoist:    hoist,
+			Mention:  mention,
+			Managed:  managed,
 		}
 
-		longCtx, _ := context.WithTimeout(ctx, time.Minute * 5)
+		longCtx, _ := context.WithTimeout(ctx, time.Minute*5)
 		_, err := clients.discord.EditRole(longCtx, editRequest)
 		if err != nil {
 			msg := fmt.Sprintf("syncRoles: EditRole(): %s", err.Error())
