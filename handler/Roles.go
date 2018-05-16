@@ -54,7 +54,7 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 	ignoredRoles = config.Bot.IgnoredRoles
 
 	addr := fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port)
-	redisClient := redis.Init(addr, config.Redis.Password, config.Redis.Database, config.LookupService("srv", "perms"))
+	redisClient := redis.Init(addr, config.Redis.Password, 0, config.LookupService("srv", "perms"))
 
 	_, err := redisClient.Client.Ping().Result()
 	if err != nil {

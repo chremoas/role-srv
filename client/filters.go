@@ -6,6 +6,7 @@ import (
 	rolesrv "github.com/chremoas/role-srv/proto"
 	common "github.com/chremoas/services-common/command"
 	"bytes"
+	"time"
 )
 
 func (r Roles) AddFilter(ctx context.Context, sender, filterName, filterDescription string) string {
@@ -74,31 +75,43 @@ func (r Roles) RemoveFilter(ctx context.Context, sender, name string) string {
 
 func (r Roles) ListMembers(ctx context.Context, name string) string {
 	var buffer bytes.Buffer
+	longCtx, _ := context.WithTimeout(context.Background(), time.Minute)
+	fmt.Println("HERE 1")
 	members, err := r.RoleClient.GetMembers(ctx, &rolesrv.Filter{Name: name})
+	fmt.Println("HERE 2")
 
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
+	fmt.Println("HERE 3")
 
 	if len(members.Members) == 0 {
 		return common.SendError("No members in filter")
 	}
+	fmt.Println("HERE 4")
 
 	buffer.WriteString("Filter Members:\n")
+	fmt.Println("HERE 5")
 	for member := range members.Members {
-		user, err := r.RoleClient.GetDiscordUser(ctx, &rolesrv.GetDiscordUserRequest{UserId: members.Members[member]})
+		fmt.Println("HERE 6")
+		user, err := r.RoleClient.GetDiscordUser(longCtx, &rolesrv.GetDiscordUserRequest{UserId: members.Members[member]})
+		fmt.Println("HERE 7")
 		if err != nil {
+			fmt.Println("HERE 8")
 			if err.Error() != unknownUserError {
+				fmt.Println("HERE 9")
 				return common.SendError(err.Error())
 			}
-		}
-		if err.Error() == unknownUserError {
 			buffer.WriteString(fmt.Sprintf("\t%s\n", members.Members[member]))
+			fmt.Println("HERE 10")
 		} else {
+			fmt.Println("HERE 13")
 			buffer.WriteString(fmt.Sprintf("\t%s\n", user.Username))
 		}
+		fmt.Println("HERE 14")
 	}
 
+	fmt.Println("HERE 15")
 	return fmt.Sprintf("```%s```", buffer.String())
 }
 
