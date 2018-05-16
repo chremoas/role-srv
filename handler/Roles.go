@@ -324,7 +324,9 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	ctx := context.Background()
 	sugar := h.Logger.Sugar()
 	var roleNameMap = make(map[string]string)
-	var membershipSets = make(map[string]*sets.StringSet)
+	var discordMemberships = make(map[string]*sets.StringSet)
+	var chremoasMemberships = make(map[string]*sets.StringSet)
+	var updateMembers = make(map[string]*sets.StringSet)
 
 	// Discord limit is 1000, should probably make this a config option. -brian
 	var numberPerPage int32 = 1000
@@ -347,8 +349,16 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 
 		for m := range members.Members {
 			userId := members.Members[m].User.Id
-			if _, ok := membershipSets[userId]; !ok {
-				membershipSets[userId] = sets.NewStringSet()
+			if _, ok := discordMemberships[userId]; !ok {
+				discordMemberships[userId] = sets.NewStringSet()
+			}
+
+			for r := range members.Members[m].Roles {
+				discordMemberships[userId].Add(members.Members[m].Roles[r].Name)
+			}
+
+			if _, ok := chremoasMemberships[userId]; !ok {
+				chremoasMemberships[userId] = sets.NewStringSet()
 			}
 
 			oldNum, _ := strconv.Atoi(members.Members[m].User.Id)
@@ -426,41 +436,65 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 			return err
 		}
 
-		roleId := roleNameMap[roleName["Name"]]
+		//roleId := roleNameMap[roleName["Name"]]
 
 		for m := range membership.Set {
 			sugar.Debugf("Key is: %s", m)
 			if len(m) != 0 {
-				sugar.Debugf("Set is %v", membershipSets[m])
-				if membershipSets[m] == nil {
-					membershipSets[m] = sets.NewStringSet()
+				sugar.Debugf("Set is %v", chremoasMemberships[m])
+				if chremoasMemberships[m] == nil {
+					chremoasMemberships[m] = sets.NewStringSet()
 				}
-				membershipSets[m].Add(roleId)
+				chremoasMemberships[m].Add(roleName["Name"])
 			}
 		}
 	}
 
 	h.sendDualMessage(
-		fmt.Sprintf("Got all role Membership [%s]", time.Since(t)),
+		fmt.Sprintf("Got all role Memberships [%s]", time.Since(t)),
 		channelId,
 		sendMessage,
 	)
 
 	t = time.Now()
 
+	for m := range chremoasMemberships {
+		if discordMemberships[m] == nil {
+			sugar.Debugf("not in discord: %v", m)
+			continue
+		}
+
+		diff := chremoasMemberships[m].Difference(discordMemberships[m])
+		if diff.Len() != 0 {
+			updateMembers[m] = sets.NewStringSet()
+			for r := range chremoasMemberships[m].Set {
+				updateMembers[m].Add(roleNameMap[r])
+			}
+		}
+
+		diff = discordMemberships[m].Difference(chremoasMemberships[m])
+		if diff.Len() != 0 {
+			updateMembers[m] = sets.NewStringSet()
+			for r := range chremoasMemberships[m].Set {
+				updateMembers[m].Add(roleNameMap[r])
+			}
+		}
+	}
+
 	// Apply the membership sets to discord overwriting anything that's there.
 	h.sendDualMessage(
-		fmt.Sprintf("Updating %d discord users", len(membershipSets)),
+		fmt.Sprintf("Updating %d discord users", len(updateMembers)),
 		channelId,
 		sendMessage,
 	)
 
-	for m := range membershipSets {
+	for m := range updateMembers {
 		clients.discord.UpdateMember(ctx, &discord.UpdateMemberRequest{
 			Operation: discord.MemberUpdateOperation_ADD_OR_UPDATE_ROLES,
 			UserId:    m,
-			RoleIds:   membershipSets[m].ToSlice(),
+			RoleIds:   updateMembers[m].ToSlice(),
 		})
+		fmt.Printf("updateMembers[m]=%v\n", updateMembers[m].ToSlice())
 		sugar.Infof("Updating Discord User: %s", m)
 	}
 
