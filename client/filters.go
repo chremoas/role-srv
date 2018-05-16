@@ -88,9 +88,15 @@ func (r Roles) ListMembers(ctx context.Context, name string) string {
 	for member := range members.Members {
 		user, err := r.RoleClient.GetDiscordUser(ctx, &rolesrv.GetDiscordUserRequest{UserId: members.Members[member]})
 		if err != nil {
-			return common.SendError(err.Error())
+			if err.Error() != unknownUserError {
+				return common.SendError(err.Error())
+			}
 		}
-		buffer.WriteString(fmt.Sprintf("\t%s\n", user.Username))
+		if err.Error() == unknownUserError {
+			buffer.WriteString(fmt.Sprintf("\t%s\n", members.Members[member]))
+		} else {
+			buffer.WriteString(fmt.Sprintf("\t%s\n", user.Username))
+		}
 	}
 
 	return fmt.Sprintf("```%s```", buffer.String())

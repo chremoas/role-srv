@@ -216,9 +216,15 @@ func (r Roles) GetMembers(ctx context.Context, role string) string {
 		if len(members.Members[m]) > 0 {
 			user, err := r.RoleClient.GetDiscordUser(ctx, &rolesrv.GetDiscordUserRequest{UserId: members.Members[m]})
 			if err != nil {
-				return common.SendError(err.Error())
+				if err.Error() != unknownUserError {
+					return common.SendError(err.Error())
+				}
 			}
-			buffer.WriteString(fmt.Sprintf("\t%s\n", user.Username))
+			if err.Error() == unknownUserError {
+				buffer.WriteString(fmt.Sprintf("\t%s\n", members.Members[m]))
+			} else {
+				buffer.WriteString(fmt.Sprintf("\t%s\n", user.Username))
+			}
 		}
 	}
 

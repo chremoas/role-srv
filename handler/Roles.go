@@ -419,7 +419,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	t = time.Now()
 
 	for r := range chremoasRoles {
-		sugar.Infof("Checking role: %s", chremoasRoles[r])
+		sugar.Debugf("Checking role: %s", chremoasRoles[r])
 		membership, err := h.getRoleMembership(chremoasRoles[r])
 		if err != nil {
 			msg := fmt.Sprintf("syncMembers: getRoleMembership: %s", err.Error())
@@ -494,7 +494,6 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 			UserId:    m,
 			RoleIds:   updateMembers[m].ToSlice(),
 		})
-		fmt.Printf("updateMembers[m]=%v\n", updateMembers[m].ToSlice())
 		sugar.Infof("Updating Discord User: %s", m)
 	}
 
@@ -646,9 +645,9 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 	toDelete := discordRoleSet.Difference(chremoasRoleSet)
 	toUpdate := discordRoleSet.Intersection(chremoasRoleSet)
 
-	sugar.Infof("toAdd: %v", toAdd)
-	sugar.Infof("toDelete: %v", toDelete)
-	sugar.Infof("toUpdate: %v", toUpdate)
+	sugar.Debugf("toAdd: %v", toAdd)
+	sugar.Debugf("toDelete: %v", toDelete)
+	sugar.Debugf("toUpdate: %v", toUpdate)
 
 	for r := range toAdd.Set {
 		_, err := clients.discord.CreateRole(ctx, &discord.CreateRoleRequest{Name: r})
@@ -657,7 +656,7 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 			if matchDiscordError.MatchString(err.Error()) {
 				// The role list was cached most likely so we'll pretend we didn't try
 				// to create it just now. -brian
-				sugar.Infof("syncRoles added: %s", r)
+				sugar.Debugf("syncRoles added: %s", r)
 				continue
 			} else {
 				msg := fmt.Sprintf("syncRoles: CreateRole(): %s", err.Error())
@@ -667,7 +666,7 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 			}
 		}
 
-		sugar.Infof("syncRoles added: %s", r)
+		sugar.Debugf("syncRoles added: %s", r)
 	}
 
 	for r := range toDelete.Set {
@@ -680,7 +679,7 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 			return err
 		}
 
-		sugar.Infof("syncRoles removed: %s", r)
+		sugar.Debugf("syncRoles removed: %s", r)
 	}
 
 	for r := range toUpdate.Set {
@@ -710,7 +709,7 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 			return err
 		}
 
-		sugar.Infof("syncRoles updated: %s", r)
+		sugar.Debugf("syncRoles updated: %s", r)
 	}
 
 	return nil
