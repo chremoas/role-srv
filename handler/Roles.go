@@ -323,8 +323,6 @@ func (h *rolesHandler) sendMessage(ctx context.Context, channelId, message strin
 func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) error {
 	ctx := context.Background()
 	sugar := h.Logger.Sugar()
-	sugar.Info("Starting syncMembers()")
-	h.sendMessage(ctx, channelId, common.SendSuccess("Starting member sync"), sendMessage)
 	var roleNameMap = make(map[string]string)
 	var membershipSets = make(map[string]*sets.StringSet)
 
@@ -333,7 +331,8 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	var memberCount = 1
 	var memberId = ""
 
-	h.sendMessage(ctx, channelId, common.SendSuccess("Getting all Discord members"), sendMessage)
+	t := time.Now()
+
 	// Need to pre-populate the membership sets with all the users so we can pick up users with no roles.
 	for memberCount > 0 {
 		//longCtx, _ := context.WithTimeout(context.Background(), time.Second * 20)
@@ -363,7 +362,14 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 		memberCount = len(members.Members)
 	}
 
-	h.sendMessage(ctx, channelId, common.SendSuccess("Getting all Discord roles"), sendMessage)
+	h.sendDualMessage(
+		fmt.Sprintf("Got all Discord members [%s]", time.Since(t)),
+		channelId,
+		sendMessage,
+	)
+
+	t = time.Now()
+
 	// Get all the Roles from discord and create a map of their name to their Id
 	discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
 	if err != nil {
@@ -377,7 +383,14 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 		roleNameMap[discordRoles.Roles[d].Name] = discordRoles.Roles[d].Id
 	}
 
-	h.sendMessage(ctx, channelId, common.SendSuccess("Getting all Chremoas roles"), sendMessage)
+	h.sendDualMessage(
+		fmt.Sprintf("Got all Discord roles [%s]", time.Since(t)),
+		channelId,
+		sendMessage,
+	)
+
+	t = time.Now()
+
 	// Get all the Chremoas roles and build membership Sets
 	chremoasRoles, err := h.getRoles()
 	if err != nil {
@@ -387,9 +400,16 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 		return err
 	}
 
-	h.sendMessage(ctx, channelId, common.SendSuccess("Getting all role membership"), sendMessage)
+	h.sendDualMessage(
+		fmt.Sprintf("Got all Chremoas roles [%s]", time.Since(t)),
+		channelId,
+		sendMessage,
+	)
+
+	t = time.Now()
+
 	for r := range chremoasRoles {
-		fmt.Printf("Checking role: %s\n", chremoasRoles[r])
+		sugar.Infof("Checking role: %s", chremoasRoles[r])
 		membership, err := h.getRoleMembership(chremoasRoles[r])
 		if err != nil {
 			msg := fmt.Sprintf("syncMembers: getRoleMembership: %s", err.Error())
@@ -409,9 +429,9 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 		roleId := roleNameMap[roleName["Name"]]
 
 		for m := range membership.Set {
-			sugar.Infof("Key is: %s", m)
+			sugar.Debugf("Key is: %s", m)
 			if len(m) != 0 {
-				sugar.Infof("Set is %v", membershipSets[m])
+				sugar.Debugf("Set is %v", membershipSets[m])
 				if membershipSets[m] == nil {
 					membershipSets[m] = sets.NewStringSet()
 				}
@@ -420,18 +440,36 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 		}
 	}
 
-	h.sendMessage(ctx, channelId, common.SendSuccess("Updating Discord Roles"), sendMessage)
+	h.sendDualMessage(
+		fmt.Sprintf("Got all role Membership [%s]", time.Since(t)),
+		channelId,
+		sendMessage,
+	)
+
+	t = time.Now()
+
 	// Apply the membership sets to discord overwriting anything that's there.
+	h.sendDualMessage(
+		fmt.Sprintf("Updating %d discord users", len(membershipSets)),
+		channelId,
+		sendMessage,
+	)
+
 	for m := range membershipSets {
 		clients.discord.UpdateMember(ctx, &discord.UpdateMemberRequest{
 			Operation: discord.MemberUpdateOperation_ADD_OR_UPDATE_ROLES,
 			UserId:    m,
 			RoleIds:   membershipSets[m].ToSlice(),
 		})
+		sugar.Infof("Updating Discord User: %s", m)
 	}
 
-	h.Logger.Info("Finished syncMembers()")
-	h.sendMessage(ctx, channelId, common.SendSuccess("Finished syncMembers()"), sendMessage)
+	h.sendDualMessage(
+		fmt.Sprintf("Updated Discord Roles [%s]", time.Since(t)),
+		channelId,
+		sendMessage,
+	)
+
 	return nil
 }
 
@@ -520,8 +558,6 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 	sugar := h.Logger.Sugar()
 	var chremoasRoleData = make(map[string]map[string]string)
 
-	h.sendMessage(ctx, channelId, common.SendSuccess("Starting Role Sync"), sendMessage)
-	sugar.Info("syncRoles: Starting Role Sync")
 
 	chremoasRoles, err := h.getRoles()
 	if err != nil {
@@ -642,9 +678,6 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 
 		sugar.Infof("syncRoles updated: %s", r)
 	}
-
-	h.sendMessage(ctx, channelId, common.SendSuccess("Finished Role Sync"), sendMessage)
-	sugar.Info("syncRoles: Finished Role Sync")
 
 	return nil
 }
@@ -833,10 +866,36 @@ func (h *rolesHandler) SyncToChatService(ctx context.Context, request *rolesrv.S
 	return nil
 }
 
+func (h *rolesHandler) sendDualMessage(msg, channelId string, sendMessage bool) {
+	ctx := context.Background()
+	sugar := h.Logger.Sugar()
+
+	sugar.Info(msg)
+	h.sendMessage(ctx, channelId, common.SendSuccess(msg), sendMessage)
+}
+
 func (h *rolesHandler) syncThread() {
 	for {
 		request := <-syncControl
+
+		t1 := time.Now()
+
+		h.sendDualMessage("Starting Role Sync", request.ChannelId, request.SendMessage)
+
 		h.syncRoles(request.ChannelId, request.UserId, request.SendMessage)
+
+		msg := fmt.Sprintf("Completed Role Sync [%s]", time.Since(t1))
+		h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
+
+		t2 := time.Now()
+		h.sendDualMessage("Starting Member Sync", request.ChannelId, request.SendMessage)
+
 		h.syncMembers(request.ChannelId, request.UserId, request.SendMessage)
+
+		msg = fmt.Sprintf("Completed Member Sync [%s]", time.Since(t2))
+		h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
+
+		msg = fmt.Sprintf("Completed All Syncing [%s]", time.Since(t1))
+		h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
 	}
 }

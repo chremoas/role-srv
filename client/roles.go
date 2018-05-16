@@ -168,7 +168,7 @@ func (r Roles) SyncRoles(ctx context.Context, sender string) string {
 		return common.SendFatal(err.Error())
 	}
 
-	return common.SendSuccess("Done")
+	return ""
 }
 
 func (r Roles) Set(ctx context.Context, sender, name, key, value string) string {
