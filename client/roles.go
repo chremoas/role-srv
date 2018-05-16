@@ -84,7 +84,7 @@ func (r Roles) AddRole(ctx context.Context, sender, shortName, roleType, filterA
 		return common.SendFatal(err.Error())
 	}
 
-	_, err = r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender, false))
+	_, err = r.RoleClient.SyncToChatService(ctx, r.GetSyncRequest(sender, false))
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -117,7 +117,7 @@ func (r Roles) RemoveRole(ctx context.Context, sender, shortName string, sig boo
 		return common.SendFatal(err.Error())
 	}
 
-	_, err = r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender, false))
+	_, err = r.RoleClient.SyncToChatService(ctx, r.GetSyncRequest(sender, false))
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -163,7 +163,7 @@ func (r Roles) RoleInfo(ctx context.Context, sender, shortName string, sig bool)
 func (r Roles) SyncRoles(ctx context.Context, sender string) string {
 	r.Logger.Info("Calling SyncRoles()")
 
-	_, err := r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender, true))
+	_, err := r.RoleClient.SyncToChatService(ctx, r.GetSyncRequest(sender, true))
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -196,7 +196,7 @@ func (r Roles) Set(ctx context.Context, sender, name, key, value string) string 
 		return common.SendFatal(err.Error())
 	}
 
-	_, err = r.RoleClient.SyncRoles(ctx, r.GetSyncRequest(sender, false))
+	_, err = r.RoleClient.SyncToChatService(ctx, r.GetSyncRequest(sender, false))
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}

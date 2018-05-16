@@ -30,6 +30,13 @@ type clientList struct {
 	discord discord.DiscordGatewayService
 }
 
+type syncData struct {
+	ChannelId   string
+	UserId      string
+	SendMessage bool
+}
+
+var syncControl chan syncData
 var clients clientList
 var botRole string
 var ignoredRoles []string
@@ -54,7 +61,13 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 		panic(err)
 	}
 
-	return &rolesHandler{Redis: redisClient, Logger: log}
+	rh := &rolesHandler{Redis: redisClient, Logger: log}
+
+	// Start sync thread
+	syncControl = make(chan syncData)
+	go rh.syncThread()
+
+	return rh
 }
 
 func (h *rolesHandler) GetRoleKeys(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.StringList) error {
@@ -301,11 +314,6 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 	return nil
 }
 
-func (h *rolesHandler) SyncMembers(ctx context.Context, request *rolesrv.SyncRequest, response *rolesrv.NilMessage) error {
-	go h.syncMembers(request.ChannelId, request.UserId, request.SendMessage)
-	return nil
-}
-
 func (h *rolesHandler) sendMessage(ctx context.Context, channelId, message string, sendMessage bool) {
 	if sendMessage {
 		clients.discord.SendMessage(ctx, &discord.SendMessageRequest{ChannelId: channelId, Message: message})
@@ -502,13 +510,6 @@ func (h *rolesHandler) getRoleMembership(role string) (members *sets.StringSet, 
 
 	filterASet.FromSlice(filterInter)
 	return filterASet, nil
-}
-
-func (h *rolesHandler) SyncRoles(ctx context.Context, request *rolesrv.SyncRequest, response *rolesrv.NilMessage) error {
-	// This was spawning a thread but I think I want to keep this one serialized so that it's guaranteed to finish
-	// before member syncing starts. -brian
-	h.syncRoles(request.ChannelId, request.UserId, request.SendMessage)
-	return nil
 }
 
 func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) error {
@@ -825,4 +826,17 @@ func (h *rolesHandler) GetDiscordUser(ctx context.Context, request *rolesrv.GetD
 	response.Verified = user.User.Verified
 
 	return nil
+}
+
+func (h *rolesHandler) SyncToChatService(ctx context.Context, request *rolesrv.SyncRequest, response *rolesrv.NilMessage) error {
+	syncControl <- syncData{ChannelId: request.ChannelId, UserId: request.UserId, SendMessage: request.SendMessage}
+	return nil
+}
+
+func (h *rolesHandler) syncThread() {
+	for {
+		request := <-syncControl
+		h.syncRoles(request.ChannelId, request.UserId, request.SendMessage)
+		h.syncMembers(request.ChannelId, request.UserId, request.SendMessage)
+	}
 }
