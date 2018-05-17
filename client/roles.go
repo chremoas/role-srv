@@ -205,28 +205,12 @@ func (r Roles) Set(ctx context.Context, sender, name, key, value string) string 
 }
 
 func (r Roles) GetMembers(ctx context.Context, role string) string {
-	var buffer bytes.Buffer
-
 	members, err := r.RoleClient.GetRoleMembership(ctx, &rolesrv.RoleMembershipRequest{Name: role})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
 
-	for m := range members.Members {
-		if len(members.Members[m]) > 0 {
-			user, err := r.RoleClient.GetDiscordUser(ctx, &rolesrv.GetDiscordUserRequest{UserId: members.Members[m]})
-			if err != nil {
-				if err.Error() != unknownUserError {
-					return common.SendError(err.Error())
-				}
-			}
-			if err.Error() == unknownUserError {
-				buffer.WriteString(fmt.Sprintf("\t%s\n", members.Members[m]))
-			} else {
-				buffer.WriteString(fmt.Sprintf("\t%s\n", user.Username))
-			}
-		}
-	}
+	buffer, err := r.MapName(ctx, members.Members)
 
 	if buffer.Len() == 0 {
 		return "```Empty list```\n"

@@ -23,6 +23,7 @@ service Roles {
     rpc SyncToChatService (SyncRequest) returns (NilMessage) {};
 
     rpc GetDiscordUser (GetDiscordUserRequest) returns (GetDiscordUserResponse) {};
+    rpc GetDiscordUserList (NilMessage) returns (GetDiscordUserListResponse) {};
 }
 
 message NilMessage {}
@@ -39,14 +40,19 @@ message GetDiscordUserRequest {
     string UserId = 1;
 }
 
+message GetDiscordUserListResponse {
+    repeated GetDiscordUserResponse Users = 1;
+}
+
 message GetDiscordUserResponse {
-    string Username	= 1;
-    string Discriminator = 2;
-    string Avatar = 3;
-    bool Bot = 4;
-    bool MfaEnabled = 5;
-    bool Verified = 6;
-    string Email = 7;
+    string Id = 1;
+    string Username	= 2;
+    string Discriminator = 3;
+    string Avatar = 4;
+    bool Bot = 5;
+    bool MfaEnabled = 6;
+    bool Verified = 7;
+    string Email = 8;
 }
 
 message SyncRequest {

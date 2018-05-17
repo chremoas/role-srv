@@ -591,7 +591,6 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 	sugar := h.Logger.Sugar()
 	var chremoasRoleData = make(map[string]map[string]string)
 
-
 	chremoasRoles, err := h.getRoles()
 	if err != nil {
 		msg := fmt.Sprintf("syncRoles: h.getRoles(): %s", err.Error())
@@ -878,18 +877,46 @@ func (h *rolesHandler) RemoveMembers(ctx context.Context, request *rolesrv.Membe
 }
 
 func (h *rolesHandler) GetDiscordUser(ctx context.Context, request *rolesrv.GetDiscordUserRequest, response *rolesrv.GetDiscordUserResponse) error {
-	user, err := clients.discord.GetUser(ctx, &discord.GetUserRequest{UserId: request.UserId})
+	members, err := clients.discord.GetAllMembersAsSlice(ctx, &discord.GetAllMembersRequest{})
 	if err != nil {
 		return err
 	}
 
-	response.Username = user.User.Username
-	response.Avatar = user.User.Avatar
-	response.Bot = user.User.Bot
-	response.Discriminator = user.User.Discriminator
-	response.Email = user.User.Email
-	response.MfaEnabled = user.User.MFAEnabled
-	response.Verified = user.User.Verified
+	for m := range members.Members {
+		if request.UserId == members.Members[m].User.Id {
+			response.Username = members.Members[m].User.Username
+			response.Avatar = members.Members[m].User.Avatar
+			response.Bot = members.Members[m].User.Bot
+			response.Discriminator = members.Members[m].User.Discriminator
+			response.Email = members.Members[m].User.Email
+			response.MfaEnabled = members.Members[m].User.MFAEnabled
+			response.Verified = members.Members[m].User.Verified
+
+			return nil
+		}
+	}
+
+	return errors.New("User not found")
+}
+
+func (h *rolesHandler) GetDiscordUserList(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.GetDiscordUserListResponse) error {
+	members, err := clients.discord.GetAllMembersAsSlice(ctx, &discord.GetAllMembersRequest{})
+	if err != nil {
+		return err
+	}
+
+	for m := range members.Members {
+		response.Users = append(response.Users, &rolesrv.GetDiscordUserResponse{
+			Id:            members.Members[m].User.Id,
+			Username:      members.Members[m].User.Username,
+			Avatar:        members.Members[m].User.Avatar,
+			Bot:           members.Members[m].User.Bot,
+			Discriminator: members.Members[m].User.Discriminator,
+			Email:         members.Members[m].User.Email,
+			MfaEnabled:    members.Members[m].User.MFAEnabled,
+			Verified:      members.Members[m].User.Verified,
+		})
+	}
 
 	return nil
 }

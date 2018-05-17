@@ -12,6 +12,7 @@ It has these top-level messages:
 	RoleMembershipRequest
 	RoleMembershipResponse
 	GetDiscordUserRequest
+	GetDiscordUserListResponse
 	GetDiscordUserResponse
 	SyncRequest
 	StringList
@@ -70,6 +71,7 @@ type RolesService interface {
 	RemoveMembers(ctx context.Context, in *Members, opts ...client.CallOption) (*NilMessage, error)
 	SyncToChatService(ctx context.Context, in *SyncRequest, opts ...client.CallOption) (*NilMessage, error)
 	GetDiscordUser(ctx context.Context, in *GetDiscordUserRequest, opts ...client.CallOption) (*GetDiscordUserResponse, error)
+	GetDiscordUserList(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*GetDiscordUserListResponse, error)
 }
 
 type rolesService struct {
@@ -250,6 +252,16 @@ func (c *rolesService) GetDiscordUser(ctx context.Context, in *GetDiscordUserReq
 	return out, nil
 }
 
+func (c *rolesService) GetDiscordUserList(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*GetDiscordUserListResponse, error) {
+	req := c.c.NewRequest(c.name, "Roles.GetDiscordUserList", in)
+	out := new(GetDiscordUserListResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Roles service
 
 type RolesHandler interface {
@@ -269,6 +281,7 @@ type RolesHandler interface {
 	RemoveMembers(context.Context, *Members, *NilMessage) error
 	SyncToChatService(context.Context, *SyncRequest, *NilMessage) error
 	GetDiscordUser(context.Context, *GetDiscordUserRequest, *GetDiscordUserResponse) error
+	GetDiscordUserList(context.Context, *NilMessage, *GetDiscordUserListResponse) error
 }
 
 func RegisterRolesHandler(s server.Server, hdlr RolesHandler, opts ...server.HandlerOption) {
@@ -289,6 +302,7 @@ func RegisterRolesHandler(s server.Server, hdlr RolesHandler, opts ...server.Han
 		RemoveMembers(ctx context.Context, in *Members, out *NilMessage) error
 		SyncToChatService(ctx context.Context, in *SyncRequest, out *NilMessage) error
 		GetDiscordUser(ctx context.Context, in *GetDiscordUserRequest, out *GetDiscordUserResponse) error
+		GetDiscordUserList(ctx context.Context, in *NilMessage, out *GetDiscordUserListResponse) error
 	}
 	type Roles struct {
 		roles
@@ -363,4 +377,8 @@ func (h *rolesHandler) SyncToChatService(ctx context.Context, in *SyncRequest, o
 
 func (h *rolesHandler) GetDiscordUser(ctx context.Context, in *GetDiscordUserRequest, out *GetDiscordUserResponse) error {
 	return h.RolesHandler.GetDiscordUser(ctx, in, out)
+}
+
+func (h *rolesHandler) GetDiscordUserList(ctx context.Context, in *NilMessage, out *GetDiscordUserListResponse) error {
+	return h.RolesHandler.GetDiscordUserList(ctx, in, out)
 }
