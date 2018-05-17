@@ -23,7 +23,11 @@ func (r Roles) MapName(ctx context.Context, members []string) (buffer bytes.Buff
 		if len(members[m]) > 0 {
 			for u := range users.Users {
 				if members[m] == users.Users[u].Id {
-					buffer.WriteString(fmt.Sprintf("\t%s\n", users.Users[u].Nick))
+					if len(users.Users[u].Nick) != 0 {
+						buffer.WriteString(fmt.Sprintf("\t%s\n", users.Users[u].Nick))
+					} else {
+						buffer.WriteString(fmt.Sprintf("\t%s\n", users.Users[u].Username))
+					}
 					found = true
 				}
 			}
