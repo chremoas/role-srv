@@ -907,6 +907,7 @@ func (h *rolesHandler) GetDiscordUserList(ctx context.Context, request *rolesrv.
 
 	for m := range members.Members {
 		response.Users = append(response.Users, &rolesrv.GetDiscordUserResponse{
+			Nick:          members.Members[m].Nick,
 			Id:            members.Members[m].User.Id,
 			Username:      members.Members[m].User.Username,
 			Avatar:        members.Members[m].User.Avatar,

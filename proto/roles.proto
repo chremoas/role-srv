@@ -53,6 +53,7 @@ message GetDiscordUserResponse {
     bool MfaEnabled = 6;
     bool Verified = 7;
     string Email = 8;
+    string Nick = 9;
 }
 
 message SyncRequest {
