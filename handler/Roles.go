@@ -64,7 +64,7 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 	rh := &rolesHandler{Redis: redisClient, Logger: log}
 
 	// Start sync thread
-	syncControl = make(chan syncData)
+	syncControl = make(chan syncData, 30)
 	go rh.syncThread()
 
 	return rh
