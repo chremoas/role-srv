@@ -210,7 +210,7 @@ func (r Roles) GetMembers(ctx context.Context, role string) string {
 		return common.SendFatal(err.Error())
 	}
 
-	buffer, err := r.MapName(ctx, members.Members)
+	buffer, _, err := r.MapName(ctx, members.Members)
 
 	if buffer.Len() == 0 {
 		return "```Empty list```\n"

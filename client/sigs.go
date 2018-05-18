@@ -64,24 +64,11 @@ func (r Roles) sigAction(ctx context.Context, sender, sig string, join, joinable
 		return common.SendError(err.Error())
 	}
 
-	user, err := r.RoleClient.GetDiscordUser(ctx, &rolesrv.GetDiscordUserRequest{UserId: s[1]})
-	if err != nil {
-		if err.Error() != unknownUserError {
-			return common.SendError(err.Error())
-		}
-	}
-
-	var outputName string
-
-	if err.Error() == unknownUserError {
-		outputName = s[1]
-	} else {
-		outputName = user.Username
-	}
+	_, outputName, err := r.MapName(ctx, []string{s[1]})
 
 	if join {
-		return common.SendSuccess(fmt.Sprintf("Added %s to %s", outputName, sig))
+		return common.SendSuccess(fmt.Sprintf("Added %s to %s", outputName[0], sig))
 	} else {
-		return common.SendSuccess(fmt.Sprintf("Removed %s from %s", outputName, sig))
+		return common.SendSuccess(fmt.Sprintf("Removed %s from %s", outputName[0], sig))
 	}
 }

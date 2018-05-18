@@ -85,7 +85,7 @@ func (r Roles) ListMembers(ctx context.Context, name string) string {
 		return common.SendError("No members in filter")
 	}
 
-	buffer, err := r.MapName(ctx, members.Members)
+	buffer, _, err := r.MapName(ctx, members.Members)
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
