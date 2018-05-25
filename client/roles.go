@@ -7,8 +7,8 @@ import (
 	permsrv "github.com/chremoas/perms-srv/proto"
 	rolesrv "github.com/chremoas/role-srv/proto"
 	common "github.com/chremoas/services-common/command"
-	"go.uber.org/zap"
 	"github.com/chremoas/services-common/sets"
+	"go.uber.org/zap"
 	"strconv"
 )
 
@@ -45,7 +45,7 @@ func (r Roles) ListRoles(ctx context.Context, all, sig bool) string {
 
 	buffer.WriteString(fmt.Sprintf("%ss:\n", clientType[sig]))
 	for role := range roleList {
-		buffer.WriteString(fmt.Sprintf("\t%s: %s\n", role, roleList[role]))
+		buffer.WriteString(fmt.Sprintf("\t%s\n", role))
 	}
 
 	return fmt.Sprintf("```%s```", buffer.String())
