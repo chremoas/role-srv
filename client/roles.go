@@ -45,7 +45,11 @@ func (r Roles) ListRoles(ctx context.Context, all, sig bool) string {
 
 	buffer.WriteString(fmt.Sprintf("%ss:\n", clientType[sig]))
 	for role := range roleList {
-		buffer.WriteString(fmt.Sprintf("\t%s\n", role))
+		if sig {
+			buffer.WriteString(fmt.Sprintf("\t%s: %s\n", role, roleList[role]))
+		} else {
+			buffer.WriteString(fmt.Sprintf("\t%s\n", role))
+		}
 	}
 
 	return fmt.Sprintf("```%s```", buffer.String())
