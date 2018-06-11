@@ -237,5 +237,5 @@ func (r Roles) ListUserRoles(ctx context.Context, userid string, sig bool) strin
 		}
 	}
 
-	return fmt.Sprintf("```Sigs for:%s```\n", buffer.String())
+	return fmt.Sprintf("```Member of for:%s```\n", buffer.String())
 }
