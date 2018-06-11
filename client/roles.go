@@ -222,3 +222,20 @@ func (r Roles) GetMembers(ctx context.Context, role string) string {
 
 	return fmt.Sprintf("```%s Members:\n%s```\n", role, buffer.String())
 }
+
+func (r Roles) ListUserRoles(ctx context.Context, userid string, sig bool) string {
+	roles, err := r.RoleClient.ListUserRoles(ctx, &rolesrv.ListUserRolesRequest{UserId: userid})
+	if err != nil {
+		return common.SendFatal(err.Error())
+	}
+
+	buffer, _, err := r.MapName(ctx, []string{userid})
+
+	for role := range roles.Roles {
+		if sig == roles.Roles[role].Sig {
+			buffer.WriteString(fmt.Sprintf("\t%s\n", roles.Roles[role].ShortName))
+		}
+	}
+
+	return fmt.Sprintf("```Sigs for:%s```\n", buffer.String())
+}

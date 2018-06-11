@@ -281,13 +281,7 @@ func (h *rolesHandler) getRole(name string) (role map[string]string, err error) 
 	return r, nil
 }
 
-func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, response *rolesrv.Role) error {
-	role, err := h.getRole(request.ShortName)
-
-	if err != nil {
-		return err
-	}
-
+func (h *rolesHandler) mapRoleToProtobufRole(role map[string]string) *rolesrv.Role {
 	color, _ := strconv.ParseInt(role["Color"], 10, 32)
 	position, _ := strconv.ParseInt(role["Position"], 10, 32)
 	permissions, _ := strconv.ParseInt(role["Permissions"], 10, 32)
@@ -297,20 +291,30 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 	sig, _ := strconv.ParseBool(role["Sig"])
 	joinable, _ := strconv.ParseBool(role["Joinable"])
 
-	response.ShortName = request.ShortName
-	response.Type = role["Type"]
-	response.FilterA = role["FilterA"]
-	response.FilterB = role["FilterB"]
-	response.Name = role["Name"]
-	response.Color = int32(color)
-	response.Hoist = hoist
-	response.Position = int32(position)
-	response.Permissions = int32(permissions)
-	response.Managed = managed
-	response.Mentionable = mentionable
-	response.Sig = sig
-	response.Joinable = joinable
+	return &rolesrv.Role{
+		ShortName:   role["ShortName"],
+		Type:        role["Type"],
+		FilterA:     role["FilterA"],
+		FilterB:     role["FilterB"],
+		Name:        role["Name"],
+		Color:       int32(color),
+		Hoist:       hoist,
+		Position:    int32(position),
+		Permissions: int32(permissions),
+		Managed:     managed,
+		Mentionable: mentionable,
+		Sig:         sig,
+		Joinable:    joinable,
+	}
+}
 
+func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, response *rolesrv.Role) error {
+	role, err := h.getRole(request.ShortName)
+	if err != nil {
+		return err
+	}
+
+	*response = *h.mapRoleToProtobufRole(role)
 	return nil
 }
 
@@ -959,4 +963,29 @@ func (h *rolesHandler) syncThread() {
 		msg = fmt.Sprintf("Completed All Syncing [%s]", time.Since(t1))
 		h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
 	}
+}
+
+func (h *rolesHandler) ListUserRoles(ctx context.Context, request *rolesrv.ListUserRolesRequest, response *rolesrv.ListUserRolesResponse) error {
+	roles, err := h.getRoles()
+	if err != nil {
+		return err
+	}
+
+	for role := range roles {
+		r, err := h.getRoleMembership(roles[role])
+		if err != nil {
+			return err
+		}
+
+		if r.Contains(request.UserId) {
+			rInfo, err := h.getRole(roles[role])
+			if err != nil {
+				return err
+			}
+
+			response.Roles = append(response.Roles, h.mapRoleToProtobufRole(rInfo))
+		}
+	}
+
+	return nil
 }

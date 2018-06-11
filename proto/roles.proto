@@ -10,7 +10,9 @@ service Roles {
     rpc GetRole (Role) returns (Role) {};
     rpc GetRoleKeys (NilMessage) returns (StringList) {};
     rpc GetRoleTypes (NilMessage) returns (StringList) {};
+
     rpc GetRoleMembership (RoleMembershipRequest) returns (RoleMembershipResponse) {};
+    rpc ListUserRoles (ListUserRolesRequest) returns (ListUserRolesResponse) {};
 
     rpc GetFilters (NilMessage) returns (FilterList) {};
     rpc AddFilter (Filter) returns (NilMessage) {};
@@ -34,6 +36,14 @@ message RoleMembershipRequest {
 
 message RoleMembershipResponse {
     repeated string Members = 1;
+}
+
+message ListUserRolesRequest {
+    string UserId = 1;
+}
+
+message ListUserRolesResponse {
+    repeated Role Roles = 1;
 }
 
 message GetDiscordUserRequest {
