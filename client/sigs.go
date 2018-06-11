@@ -21,7 +21,7 @@ func (r Roles) JoinSIG(ctx context.Context, sender, sig string) string {
 }
 
 func (r Roles) LeaveSIG(ctx context.Context, sender, sig string) string {
-	return r.sigAction(ctx, sender, sig, false, true)
+	return r.sigAction(ctx, sender, sig, false, false)
 }
 
 func (r Roles) sigAction(ctx context.Context, sender, sig string, join, joinable bool) string {

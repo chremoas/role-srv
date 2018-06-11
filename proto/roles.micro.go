@@ -11,6 +11,8 @@ It has these top-level messages:
 	NilMessage
 	RoleMembershipRequest
 	RoleMembershipResponse
+	ListUserRolesRequest
+	ListUserRolesResponse
 	GetDiscordUserRequest
 	GetDiscordUserListResponse
 	GetDiscordUserResponse
@@ -63,6 +65,7 @@ type RolesService interface {
 	GetRoleKeys(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*StringList, error)
 	GetRoleTypes(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*StringList, error)
 	GetRoleMembership(ctx context.Context, in *RoleMembershipRequest, opts ...client.CallOption) (*RoleMembershipResponse, error)
+	ListUserRoles(ctx context.Context, in *ListUserRolesRequest, opts ...client.CallOption) (*ListUserRolesResponse, error)
 	GetFilters(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*FilterList, error)
 	AddFilter(ctx context.Context, in *Filter, opts ...client.CallOption) (*NilMessage, error)
 	RemoveFilter(ctx context.Context, in *Filter, opts ...client.CallOption) (*NilMessage, error)
@@ -172,6 +175,16 @@ func (c *rolesService) GetRoleMembership(ctx context.Context, in *RoleMembership
 	return out, nil
 }
 
+func (c *rolesService) ListUserRoles(ctx context.Context, in *ListUserRolesRequest, opts ...client.CallOption) (*ListUserRolesResponse, error) {
+	req := c.c.NewRequest(c.name, "Roles.ListUserRoles", in)
+	out := new(ListUserRolesResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *rolesService) GetFilters(ctx context.Context, in *NilMessage, opts ...client.CallOption) (*FilterList, error) {
 	req := c.c.NewRequest(c.name, "Roles.GetFilters", in)
 	out := new(FilterList)
@@ -273,6 +286,7 @@ type RolesHandler interface {
 	GetRoleKeys(context.Context, *NilMessage, *StringList) error
 	GetRoleTypes(context.Context, *NilMessage, *StringList) error
 	GetRoleMembership(context.Context, *RoleMembershipRequest, *RoleMembershipResponse) error
+	ListUserRoles(context.Context, *ListUserRolesRequest, *ListUserRolesResponse) error
 	GetFilters(context.Context, *NilMessage, *FilterList) error
 	AddFilter(context.Context, *Filter, *NilMessage) error
 	RemoveFilter(context.Context, *Filter, *NilMessage) error
@@ -294,6 +308,7 @@ func RegisterRolesHandler(s server.Server, hdlr RolesHandler, opts ...server.Han
 		GetRoleKeys(ctx context.Context, in *NilMessage, out *StringList) error
 		GetRoleTypes(ctx context.Context, in *NilMessage, out *StringList) error
 		GetRoleMembership(ctx context.Context, in *RoleMembershipRequest, out *RoleMembershipResponse) error
+		ListUserRoles(ctx context.Context, in *ListUserRolesRequest, out *ListUserRolesResponse) error
 		GetFilters(ctx context.Context, in *NilMessage, out *FilterList) error
 		AddFilter(ctx context.Context, in *Filter, out *NilMessage) error
 		RemoveFilter(ctx context.Context, in *Filter, out *NilMessage) error
@@ -345,6 +360,10 @@ func (h *rolesHandler) GetRoleTypes(ctx context.Context, in *NilMessage, out *St
 
 func (h *rolesHandler) GetRoleMembership(ctx context.Context, in *RoleMembershipRequest, out *RoleMembershipResponse) error {
 	return h.RolesHandler.GetRoleMembership(ctx, in, out)
+}
+
+func (h *rolesHandler) ListUserRoles(ctx context.Context, in *ListUserRolesRequest, out *ListUserRolesResponse) error {
+	return h.RolesHandler.ListUserRoles(ctx, in, out)
 }
 
 func (h *rolesHandler) GetFilters(ctx context.Context, in *NilMessage, out *FilterList) error {
