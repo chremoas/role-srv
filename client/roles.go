@@ -229,7 +229,7 @@ func (r Roles) ListUserRoles(ctx context.Context, userid string, sig bool) strin
 		return common.SendFatal(err.Error())
 	}
 
-	buffer, _, err := r.MapName(ctx, []string{userid})
+	buffer, _, _ := r.MapName(ctx, []string{userid})
 
 	for role := range roles.Roles {
 		if sig == roles.Roles[role].Sig {
