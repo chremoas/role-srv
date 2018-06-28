@@ -6,14 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-## [1.1.1] - 2018-06-11
-### Changed
-- Updated ListUserRoles() output to be generic for use with Roles and SIGs.
-
-## [1.1.0] - 2018-06-11
+## [1.1.5] - 2018-06-28
 ### Added
 - Changelog
-
-### Changed
-- Added ListUserRoles() service
-- Updated LeaveSIG() to allow for users to leave non-joinable SIGs.
+- Travis Building/Tagging
