@@ -4,24 +4,27 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	discordsrv "github.com/chremoas/discord-gateway/proto"
 	permsrv "github.com/chremoas/perms-srv/proto"
 	rolesrv "github.com/chremoas/role-srv/proto"
 	common "github.com/chremoas/services-common/command"
+	discord "github.com/chremoas/services-common/discord"
 	"github.com/chremoas/services-common/sets"
 	"go.uber.org/zap"
 	"strconv"
 )
 
 type Roles struct {
-	RoleClient  rolesrv.RolesService
-	PermsClient permsrv.PermissionsService
-	Permissions *common.Permissions
-	Logger      *zap.Logger
+	RoleClient    rolesrv.RolesService
+	PermsClient   permsrv.PermissionsService
+	DiscordClient discordsrv.DiscordGatewayService
+	Permissions   *common.Permissions
+	Logger        *zap.Logger
 }
 
 var clientType = map[bool]string{true: "SIG", false: "Role"}
 
-func (r Roles) ListRoles(ctx context.Context, all, sig bool) string {
+func (r Roles) ListRoles(ctx context.Context, channel string, all, sig bool) string {
 	var buffer bytes.Buffer
 	var roleList = make(map[string]string)
 	roles, err := r.RoleClient.GetRoles(ctx, &rolesrv.NilMessage{})
@@ -51,6 +54,22 @@ func (r Roles) ListRoles(ctx context.Context, all, sig bool) string {
 			buffer.WriteString(fmt.Sprintf("\t%s\n", role))
 		}
 	}
+
+	embed := discord.NewEmbed().
+		SetTitle("I am an embed").
+		SetDescription("This is a discordgo embed").
+		AddField("I am a field", "I am a value").
+		AddField("I am a second field", "I am another value").
+		SetImage("https://cdn.discordapp.com/avatars/119249192806776836/cc32c5c3ee602e1fe252f9f595f9010e.jpg?size=2048").
+		SetThumbnail("https://cdn.discordapp.com/avatars/119249192806776836/cc32c5c3ee602e1fe252f9f595f9010e.jpg?size=2048").
+		SetColor(0x00ff00).MessageEmbed
+
+	fmt.Printf("sending embed: %+v\nto channel: %s\n", embed, channel)
+
+	r.DiscordClient.SendEmbed(ctx, &discordsrv.SendMessageEmbed{
+		ChannelID: channel,
+		Message:   embed,
+	})
 
 	return fmt.Sprintf("```%s```", buffer.String())
 }
