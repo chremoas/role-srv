@@ -11,6 +11,7 @@ import (
 	"github.com/chremoas/services-common/sets"
 	"go.uber.org/zap"
 	"strconv"
+	"github.com/chremoas/services-common/discord"
 )
 
 type Roles struct {
@@ -53,6 +54,15 @@ func (r Roles) ListRoles(ctx context.Context, channel string, all, sig bool) str
 			buffer.WriteString(fmt.Sprintf("\t%s\n", role))
 		}
 	}
+
+	embed := discord.NewEmbed().
+		SetTitle("I am an embed").
+		SetDescription("This is a discordgo embed").
+		AddField("I am a field", "I am a value").
+		AddField("I am a second field", "I am a value").
+		SetColor(0x00ff00).MessageEmbed
+
+	r.DiscordClient.SendEmbed(ctx, &discordsrv.SendMessageEmbed{ChannelID: "443046304399097870", Message: embed})
 
 	return fmt.Sprintf("```%s```", buffer.String())
 }
