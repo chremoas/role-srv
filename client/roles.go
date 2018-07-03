@@ -241,3 +241,8 @@ func (r Roles) ListUserRoles(ctx context.Context, userid string, sig bool) strin
 
 	return fmt.Sprintf("```Member of for:%s```\n", buffer.String())
 }
+
+func (r Roles) SendEmbed(ctx context.Context, embed *discordsrv.SendMessageEmbed) {
+	fmt.Printf("embed: %+v\n", embed)
+	r.DiscordClient.SendEmbed(ctx, embed)
+}
