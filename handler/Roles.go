@@ -656,9 +656,8 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 		if c["Sync"] == "1" || c["Sync"] == "true" {
 			chremoasRoleSet.Add(c["Name"])
 
-			if mm, ok := chremoasRoleData[c["Name"]]; !ok {
-				mm = make(map[string]string)
-				chremoasRoleData[c["Name"]] = mm
+			if _, ok := chremoasRoleData[c["Name"]]; !ok {
+				chremoasRoleData[c["Name"]] = make(map[string]string)
 			}
 			chremoasRoleData[c["Name"]] = c
 		}
