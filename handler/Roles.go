@@ -63,11 +63,40 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 
 	rh := &rolesHandler{Redis: redisClient, Logger: log}
 
+	// Check and update Redis schema as needed
+	rh.updateSchema()
+
 	// Start sync thread
 	syncControl = make(chan syncData, 30)
 	go rh.syncThread()
 
 	return rh
+}
+
+func (h *rolesHandler) updateSchema() {
+	sugar := h.Logger.Sugar()
+
+	// Update Roles hash
+	roles, err := h.getRoles()
+
+	if err != nil {
+		sugar.Errorf("Something went wrong getting the Roles: %s", err)
+		return
+	}
+
+	for role := range roles {
+		roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", roles[role]))
+		roleInfo, err := h.Redis.Client.HGetAll(roleName).Result()
+		if err != nil {
+			sugar.Errorf("Something went wrong getting the hash from Redis: %s", err)
+			return
+		}
+
+		if roleInfo["Sync"] == "nil" {
+			sugar.Infof("Updating role (%s) with default Sync value", roles[role])
+			h.Redis.Client.HSet(roleName, "Sync", "1")
+		}
+	}
 }
 
 func (h *rolesHandler) GetRoleKeys(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.StringList) error {
