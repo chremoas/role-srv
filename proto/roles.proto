@@ -83,6 +83,7 @@ message Role {
     string FilterB = 4;
     bool Sig = 5;
     bool Joinable = 6;
+    bool Sync = 7;
 
     // Discord
     string Name = 20;
