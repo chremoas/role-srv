@@ -160,6 +160,7 @@ func (r Roles) RoleInfo(ctx context.Context, sender, shortName string, sig bool)
 	if sig {
 		buffer.WriteString(fmt.Sprintf("Joinable: %t\n", info.Joinable))
 	}
+	buffer.WriteString(fmt.Sprintf("Sync: %t\n", info.Sync))
 
 	return fmt.Sprintf("```%s```", buffer.String())
 }
@@ -177,7 +178,7 @@ func (r Roles) SyncRoles(ctx context.Context, sender string) string {
 
 func (r Roles) Set(ctx context.Context, sender, name, key, value string) string {
 	var validKeys = sets.NewStringSet()
-	validKeys.FromSlice([]string{"Color", "Hoist", "Position", "Permissions", "Managed", "Mentionable"})
+	validKeys.FromSlice([]string{"Color", "Hoist", "Position", "Permissions", "Managed", "Mentionable", "Sync"})
 
 	if !validKeys.Contains(key) {
 		var buffer bytes.Buffer

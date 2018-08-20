@@ -40,7 +40,7 @@ var syncControl chan syncData
 var clients clientList
 var botRole string
 var ignoredRoles []string
-var roleKeys = []string{"Name", "Color", "Hoist", "Position", "Permissions", "Managed", "Mentionable"}
+var roleKeys = []string{"Name", "Color", "Hoist", "Position", "Permissions", "Managed", "Mentionable", "Sync"}
 var roleTypes = []string{"internal", "discord"}
 
 func NewRolesHandler(config *config.Configuration, service micro.Service, log *zap.Logger) rolesrv.RolesHandler {
@@ -63,11 +63,40 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 
 	rh := &rolesHandler{Redis: redisClient, Logger: log}
 
+	// Check and update Redis schema as needed
+	rh.updateSchema()
+
 	// Start sync thread
 	syncControl = make(chan syncData, 30)
 	go rh.syncThread()
 
 	return rh
+}
+
+func (h *rolesHandler) updateSchema() {
+	sugar := h.Logger.Sugar()
+
+	// Update Roles hash
+	roles, err := h.getRoles()
+
+	if err != nil {
+		sugar.Errorf("Something went wrong getting the Roles: %s", err)
+		return
+	}
+
+	for role := range roles {
+		roleName := h.Redis.KeyName(fmt.Sprintf("role:%s", roles[role]))
+		roleInfo, err := h.Redis.Client.HGetAll(roleName).Result()
+		if err != nil {
+			sugar.Errorf("Something went wrong getting the hash from Redis: %s", err)
+			return
+		}
+
+		if roleInfo["Sync"] == "" {
+			sugar.Infof("Updating role (%s) with default Sync value", roles[role])
+			h.Redis.Client.HSet(roleName, "Sync", "1")
+		}
+	}
 }
 
 func (h *rolesHandler) GetRoleKeys(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.StringList) error {
@@ -209,7 +238,7 @@ func (h *rolesHandler) RemoveRole(ctx context.Context, request *rolesrv.Role, re
 }
 
 func (h *rolesHandler) GetRoles(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.GetRolesResponse) error {
-	var sigValue, joinableValue bool
+	var sigValue, joinableValue, syncValue bool
 	roles, err := h.getRoles()
 
 	if err != nil {
@@ -234,11 +263,18 @@ func (h *rolesHandler) GetRoles(ctx context.Context, request *rolesrv.NilMessage
 			joinableValue = true
 		}
 
+		if roleInfo["Sync"] == "0" {
+			syncValue = false
+		} else {
+			syncValue = true
+		}
+
 		response.Roles = append(response.Roles, &rolesrv.Role{
 			ShortName: roles[role],
 			Name:      roleInfo["Name"],
 			Sig:       sigValue,
 			Joinable:  joinableValue,
+			Sync:      syncValue,
 		})
 	}
 
@@ -290,6 +326,7 @@ func (h *rolesHandler) mapRoleToProtobufRole(role map[string]string) *rolesrv.Ro
 	mentionable, _ := strconv.ParseBool(role["Mentionable"])
 	sig, _ := strconv.ParseBool(role["Sig"])
 	joinable, _ := strconv.ParseBool(role["Joinable"])
+	sync, _ := strconv.ParseBool(role["Sync"])
 
 	return &rolesrv.Role{
 		ShortName:   role["ShortName"],
@@ -305,6 +342,7 @@ func (h *rolesHandler) mapRoleToProtobufRole(role map[string]string) *rolesrv.Ro
 		Mentionable: mentionable,
 		Sig:         sig,
 		Joinable:    joinable,
+		Sync:        sync,
 	}
 }
 
@@ -614,13 +652,15 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 			return err
 		}
 
-		chremoasRoleSet.Add(c["Name"])
+		sugar.Infof("Checking %s: %s", c["Name"], c["Sync"])
+		if c["Sync"] == "1" || c["Sync"] == "true" {
+			chremoasRoleSet.Add(c["Name"])
 
-		if mm, ok := chremoasRoleData[c["Name"]]; !ok {
-			mm = make(map[string]string)
-			chremoasRoleData[c["Name"]] = mm
+			if _, ok := chremoasRoleData[c["Name"]]; !ok {
+				chremoasRoleData[c["Name"]] = make(map[string]string)
+			}
+			chremoasRoleData[c["Name"]] = c
 		}
-		chremoasRoleData[c["Name"]] = c
 	}
 
 	discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
