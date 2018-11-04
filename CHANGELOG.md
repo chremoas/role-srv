@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.1.7] - 2018-11-04
+### Updated
+- We weren't catching errors from the discord client in two places
+
 ## [1.1.6] - 2018-08-20
 ### Added
 - Added the ability to control what roles get synced to Discord
