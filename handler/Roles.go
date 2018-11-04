@@ -357,8 +357,14 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 }
 
 func (h *rolesHandler) sendMessage(ctx context.Context, channelId, message string, sendMessage bool) {
+	sugar := h.Logger.Sugar()
+
 	if sendMessage {
-		clients.discord.SendMessage(ctx, &discord.SendMessageRequest{ChannelId: channelId, Message: message})
+		_, err := clients.discord.SendMessage(ctx, &discord.SendMessageRequest{ChannelId: channelId, Message: message})
+		if err != nil {
+			msg := fmt.Sprintf("sendMessage: %s", err.Error())
+			sugar.Error(msg)
+		}
 	}
 }
 
@@ -531,11 +537,17 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	)
 
 	for m := range updateMembers {
-		clients.discord.UpdateMember(ctx, &discord.UpdateMemberRequest{
+		_, err := clients.discord.UpdateMember(ctx, &discord.UpdateMemberRequest{
 			Operation: discord.MemberUpdateOperation_ADD_OR_UPDATE_ROLES,
 			UserId:    m,
 			RoleIds:   updateMembers[m].ToSlice(),
 		})
+		if err != nil {
+			msg := fmt.Sprintf("syncMembers: UpdateMember: %s", err.Error())
+			h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+			sugar.Error(msg)
+			return err
+		}
 		sugar.Infof("Updating Discord User: %s", m)
 	}
 
