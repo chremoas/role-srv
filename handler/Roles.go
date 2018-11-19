@@ -369,7 +369,6 @@ func (h *rolesHandler) sendMessage(ctx context.Context, channelId, message strin
 }
 
 func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) error {
-	ctx := context.Background()
 	sugar := h.Logger.Sugar()
 	var roleNameMap = make(map[string]string)
 	var discordMemberships = make(map[string]*sets.StringSet)
@@ -387,10 +386,10 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	for memberCount > 0 {
 		//longCtx, _ := context.WithTimeout(context.Background(), time.Second * 20)
 
-		members, err := clients.discord.GetAllMembers(ctx, &discord.GetAllMembersRequest{NumberPerPage: numberPerPage, After: memberId})
+		members, err := clients.discord.GetAllMembers(context.Background(), &discord.GetAllMembersRequest{NumberPerPage: numberPerPage, After: memberId})
 		if err != nil {
 			msg := fmt.Sprintf("syncMembers: GetAllMembers: %s", err.Error())
-			h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+			h.sendMessage(context.Background(), channelId, common.SendFatal(msg), true)
 			sugar.Error(msg)
 			return err
 		}
@@ -429,10 +428,10 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	t = time.Now()
 
 	// Get all the Roles from discord and create a map of their name to their Id
-	discordRoles, err := clients.discord.GetAllRoles(ctx, &discord.GuildObjectRequest{})
+	discordRoles, err := clients.discord.GetAllRoles(context.Background(), &discord.GuildObjectRequest{})
 	if err != nil {
 		msg := fmt.Sprintf("syncMembers: GetAllRoles: %s", err.Error())
-		h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+		h.sendMessage(context.Background(), channelId, common.SendFatal(msg), true)
 		sugar.Error(msg)
 		return err
 	}
@@ -453,7 +452,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	chremoasRoles, err := h.getRoles()
 	if err != nil {
 		msg := fmt.Sprintf("syncMembers: getRoles: %s", err.Error())
-		h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+		h.sendMessage(context.Background(), channelId, common.SendFatal(msg), true)
 		sugar.Error(msg)
 		return err
 	}
@@ -471,7 +470,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 		membership, err := h.getRoleMembership(chremoasRoles[r])
 		if err != nil {
 			msg := fmt.Sprintf("syncMembers: getRoleMembership: %s", err.Error())
-			h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+			h.sendMessage(context.Background(), channelId, common.SendFatal(msg), true)
 			sugar.Error(msg)
 			return err
 		}
@@ -479,7 +478,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 		roleName, err := h.getRole(chremoasRoles[r])
 		if err != nil {
 			msg := fmt.Sprintf("syncMembers: getRole: %s", err.Error())
-			h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+			h.sendMessage(context.Background(), channelId, common.SendFatal(msg), true)
 			sugar.Error(msg)
 			return err
 		}
@@ -537,14 +536,14 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	)
 
 	for m := range updateMembers {
-		_, err := clients.discord.UpdateMember(ctx, &discord.UpdateMemberRequest{
+		_, err := clients.discord.UpdateMember(context.Background(), &discord.UpdateMemberRequest{
 			Operation: discord.MemberUpdateOperation_ADD_OR_UPDATE_ROLES,
 			UserId:    m,
 			RoleIds:   updateMembers[m].ToSlice(),
 		})
 		if err != nil {
 			msg := fmt.Sprintf("syncMembers: UpdateMember: %s", err.Error())
-			h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
+			h.sendMessage(context.Background(), channelId, common.SendFatal(msg), true)
 			sugar.Error(msg)
 			return err
 		}
