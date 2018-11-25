@@ -536,7 +536,8 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	)
 
 	for m := range updateMembers {
-		_, err := clients.discord.UpdateMember(context.Background(), &discord.UpdateMemberRequest{
+		ctx, _ := context.WithTimeout(context.Background(),time.Second * 11)
+		_, err := clients.discord.UpdateMember(ctx, &discord.UpdateMemberRequest{
 			Operation: discord.MemberUpdateOperation_ADD_OR_UPDATE_ROLES,
 			UserId:    m,
 			RoleIds:   updateMembers[m].ToSlice(),
