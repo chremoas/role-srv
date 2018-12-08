@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.1.11] - 2018-12-07
+### Updated
+- Added the ability to skip syncing certain discord users
+
 ## [1.1.7] - 2018-11-04
 ### Updated
 - We weren't catching errors from the discord client in two places
