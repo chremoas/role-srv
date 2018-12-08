@@ -536,7 +536,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	)
 
 	noSyncList := h.Redis.KeyName("members:no_sync")
-	sugar.Debugf("noSyncList: %v", noSyncList)
+	sugar.Infof("noSyncList: %v", noSyncList)
 	for m := range updateMembers {
 		// Don't sync people who we don't want to mess with. Always put the Discord Server Owner here
 		// because we literally can't sync them no matter what.
