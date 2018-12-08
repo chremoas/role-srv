@@ -540,7 +540,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 
 		// Don't sync people who we don't want to mess with. Always put the Discord Server Owner here
 		// because we literally can't sync them no matter what.
-		noSync, err := h.Redis.Client.SIsMember(noSyncList, m).Result()
+		noSync, _ := h.Redis.Client.SIsMember(noSyncList, m).Result()
 		if noSync {
 			sugar.Infof("Skipping noSync user: %s", m)
 			continue
