@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+member=${1}
+
+http GET https://discordapp.com/api/v6/guilds/186540132491329537/members/${member} Content-Type:application/json Authorization:"Bot MzgxMDgyNzgyOTM3NTEzOTg2.DPB-hQ.Re2nImXortKAm63a1O2uR-2_9Dk"
