@@ -466,7 +466,19 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	t = time.Now()
 
 	for r := range chremoasRoles {
-		sugar.Debugf("Checking role: %s", chremoasRoles[r])
+		sugar.Infof("Checking role: %s", chremoasRoles[r])
+		role, err := h.getRole(chremoasRoles[r])
+		if err != nil {
+			msg := fmt.Sprintf("syncMembers: getRole: %s: %s", chremoasRoles[r], err.Error())
+			h.sendMessage(context.Background(), channelId, common.SendFatal(msg), true)
+			sugar.Error(msg)
+			return err
+		}
+
+		if role["Sync"] == "0" || role["Sync"] == "false" {
+			continue
+		}
+
 		membership, err := h.getRoleMembership(chremoasRoles[r])
 		if err != nil {
 			msg := fmt.Sprintf("syncMembers: getRoleMembership: %s", err.Error())
@@ -513,23 +525,40 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 
 		diff := chremoasMemberships[m].Difference(discordMemberships[m])
 		if diff.Len() != 0 {
-			sugar.Infof("diff1 m: %v diff: %v", m, diff)
+			sugar.Infof("diff1: %v", diff)
 			updateMembers[m] = sets.NewStringSet()
 			for r := range chremoasMemberships[m].Set {
+				for i := range ignoredRoles {
+					sugar.Infof("Checking %s == %s", roleNameMap[r], ignoredRoles[i])
+					//if roleNameMap[r] == ignoredRoles[i] {
+					//	continue
+					//}
+				}
+
 				updateMembers[m].Add(roleNameMap[r])
 			}
 		}
 
-		diff = discordMemberships[m].Difference(chremoasMemberships[m])
-		if diff.Len() != 0 {
-			sugar.Infof("diff2 m: %v diff: %v", m, diff)
-			updateMembers[m] = sets.NewStringSet()
-			for r := range chremoasMemberships[m].Set {
-				updateMembers[m].Add(roleNameMap[r])
-			}
-		}
+		// TODO: Figure out if we really need this?
+		//diff = discordMemberships[m].Difference(chremoasMemberships[m])
+		//if diff.Len() != 0 {
+		//	sugar.Infof("diff2: %v", diff)
+		//	updateMembers[m] = sets.NewStringSet()
+		//	for r := range chremoasMemberships[m].Set {
+		//		for i := range ignoredRoles {
+		//			sugar.Infof("Checking %s == %s", roleNameMap[r], ignoredRoles[i])
+		//			//if roleNameMap[r] == ignoredRoles[i] {
+		//			//	continue
+		//			//}
+		//		}
+		//
+		//		updateMembers[m].Add(roleNameMap[r])
+		//	}
+		//}
 
-		sugar.Infof("m: %v updateMembers: %v", m, updateMembers[m])
+		if updateMembers[m] != nil {
+			sugar.Infof("m: %v updateMembers: %v", m, updateMembers[m])
+		}
 	}
 
 	// Apply the membership sets to discord overwriting anything that's there.
