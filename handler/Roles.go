@@ -513,6 +513,7 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 
 		diff := chremoasMemberships[m].Difference(discordMemberships[m])
 		if diff.Len() != 0 {
+			sugar.Infof("diff1 m: %v diff: %v", m, diff)
 			updateMembers[m] = sets.NewStringSet()
 			for r := range chremoasMemberships[m].Set {
 				updateMembers[m].Add(roleNameMap[r])
@@ -521,11 +522,14 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 
 		diff = discordMemberships[m].Difference(chremoasMemberships[m])
 		if diff.Len() != 0 {
+			sugar.Infof("diff2 m: %v diff: %v", m, diff)
 			updateMembers[m] = sets.NewStringSet()
 			for r := range chremoasMemberships[m].Set {
 				updateMembers[m].Add(roleNameMap[r])
 			}
 		}
+
+		sugar.Infof("m: %v updateMembers: %v", m, updateMembers[m])
 	}
 
 	// Apply the membership sets to discord overwriting anything that's there.
