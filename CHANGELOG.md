@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.1.14] - 2019-01-03
+### Updated
+- Fixed a syncing issue with roles set to not sync but members were trying to sync them anyway
+
 ## [1.1.12] - 2018-12-07
 ### Updated
 - Added debuging and fixed where we bail on error instead of continue
