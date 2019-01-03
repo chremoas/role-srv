@@ -528,12 +528,12 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 			sugar.Infof("diff1: %v", diff)
 			updateMembers[m] = sets.NewStringSet()
 			for r := range chremoasMemberships[m].Set {
-				for i := range ignoredRoles {
-					sugar.Infof("Checking %s == %s", roleNameMap[r], ignoredRoles[i])
-					//if roleNameMap[r] == ignoredRoles[i] {
-					//	continue
-					//}
-				}
+				//for i := range ignoredRoles {
+				//	sugar.Infof("Checking %s == %s", roleNameMap[r], ignoredRoles[i])
+				//	if roleNameMap[r] == ignoredRoles[i] {
+				//		continue
+				//	}
+				//}
 
 				updateMembers[m].Add(roleNameMap[r])
 			}
