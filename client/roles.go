@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	permclient "github.com/chremoas/perms-srv/client"
 	permsrv "github.com/chremoas/perms-srv/proto"
 	rolesrv "github.com/chremoas/role-srv/proto"
 	common "github.com/chremoas/services-common/command"
@@ -15,7 +16,7 @@ import (
 type Roles struct {
 	RoleClient  rolesrv.RolesService
 	PermsClient permsrv.PermissionsService
-	Permissions *common.Permissions
+	Permissions *permclient.Permissions
 	Logger      *zap.Logger
 }
 
