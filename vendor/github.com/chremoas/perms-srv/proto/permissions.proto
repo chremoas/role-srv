@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package chremoas.perms;
+
+service Permissions {
+    rpc Perform (PermissionsRequest) returns (PerformResponse) {};
+    rpc AddPermission (Permission) returns (Permission) {};
+    rpc AddPermissionUser (PermissionUser) returns (PermissionUser) {};
+    rpc RemovePermission (Permission) returns (Permission) {};
+    rpc RemovePermissionUser (PermissionUser) returns (PermissionUser) {};
+    rpc ListPermissions (NilRequest) returns (PermissionsResponse) {};
+    rpc ListPermissionUsers (UsersRequest) returns (UsersResponse) {};
+    rpc ListUserPermissions (PermissionUser) returns (PermissionsResponse) {};
+}
+
+message NilRequest{}
+
+message UsersRequest {
+    string Permission = 1;
+}
+
+message UsersResponse {
+    repeated string UserList = 1;
+}
+
+message PermissionsRequest {
+    string User = 1;
+    repeated string PermissionsList = 2;
+}
+
+message Permission {
+    string Name = 1;
+    string Description = 2;
+}
+
+message PermissionUser {
+    string User = 1;
+    string Permission = 2;
+}
+
+message PermissionsResponse {
+    repeated Permission PermissionsList = 1;
+}
+
+message PerformResponse {
+    bool CanPerform = 1;
+}
