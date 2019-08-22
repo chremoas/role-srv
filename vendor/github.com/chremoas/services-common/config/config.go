@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"github.com/micro/go-micro"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
+	"os"
+
 	// Import the remote config driver
 	_ "github.com/spf13/viper/remote"
 )
@@ -81,6 +84,19 @@ func (c *Configuration) Load(filename string) error {
 	var fileRead, remoteRead bool
 	var fileReadErr, remoteReadErr error
 
+	logger, _ := zap.NewProduction()
+	sugar := logger.Sugar()
+
+	configNameSpace := os.Getenv("CONFIG_NAMESPACE")
+	if configNameSpace == "" {
+		configNameSpace = "default"
+	}
+
+	configType := os.Getenv("CONFIG_TYPE")
+	if configType == "" {
+		configType = "yaml"
+	}
+
 	viper.SetConfigFile(filename)
 
 	if fileReadErr = viper.ReadInConfig(); fileReadErr == nil {
@@ -92,8 +108,11 @@ func (c *Configuration) Load(filename string) error {
 
 		if consul != nil {
 			// TODO: This is very rigid. Let's find a better way.
-			if err := viper.AddRemoteProvider("consul", consul.(string), "/config/chremoas.yaml"); err == nil {
-				viper.SetConfigType("yaml") // because there is no file extension in a stream of bytes, supported extensions are "json", "toml", "yaml", "yml", "properties", "props", "prop"
+			configPath := fmt.Sprintf("/%s/config", configNameSpace)
+			sugar.Infof("Using %s Config: %s", configType, configPath)
+			err := viper.AddRemoteProvider("consul", consul.(string), configPath)
+			if err == nil {
+				viper.SetConfigType(configType) // because there is no file extension in a stream of bytes, supported extensions are "json", "toml", "yaml", "yml", "properties", "props", "prop"
 
 				if remoteReadErr = viper.ReadRemoteConfig(); remoteReadErr == nil {
 					remoteRead = true
