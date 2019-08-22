@@ -8,6 +8,7 @@ import (
 	"github.com/micro/go-micro/registry/consul"
 	"github.com/prometheus/common/log"
 	"strconv"
+	"time"
 )
 
 type InitFunc func(configuration *Configuration) error
@@ -69,6 +70,8 @@ func NewService(version, serviceType string, serviceName string, initFunc InitFu
 				Destination: &confFile,
 			},
 		),
+		micro.RegisterTTL(time.Second*30),
+		micro.RegisterInterval(time.Second*10),
 	)
 
 	service.Options()

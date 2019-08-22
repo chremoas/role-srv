@@ -8,7 +8,7 @@ require (
 	github.com/chremoas/services-common v1.2.5
 	github.com/fatih/structs v1.1.0
 	github.com/golang/protobuf v1.3.2
-	github.com/micro/go-micro v1.8.1
+	github.com/micro/go-micro v1.9.1
 	go.uber.org/zap v1.10.0
 	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80
 )
