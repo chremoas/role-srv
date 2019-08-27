@@ -61,6 +61,35 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 		panic(err)
 	}
 
+	// Let's create the role_admins and sig_admins stuff if it doesn't exist yet
+	roleAdmin := redisClient.KeyName("perms:description:role_admins")
+	exists, err := redisClient.Client.Exists(roleAdmin).Result()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		if exists == 0 {
+			log.Info("role_admins doesn't exist. Creating it.")
+			_, err = redisClient.Client.Set(roleAdmin, "Role Admins", 0).Result()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+	}
+
+	sigAdmin := redisClient.KeyName("perms:description:sig_admins")
+	exists, err = redisClient.Client.Exists(sigAdmin).Result()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		if exists == 0 {
+			log.Info("sig_admins doesn't exist. Creating it.")
+			_, err = redisClient.Client.Set(sigAdmin, "SIG Admins", 0).Result()
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+	}
+
 	rh := &rolesHandler{Redis: redisClient, Logger: log}
 
 	// Check and update Redis schema as needed
