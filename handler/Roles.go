@@ -60,7 +60,7 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 	}
 
 	// Let's create the role_admins and sig_admins stuff if it doesn't exist yet
-	roleAdmin := redisClient.KeyName("perms:description:role_admins")
+	roleAdmin := redisClient.KeyName("description:role_admins")
 	exists, err := redisClient.Client.Exists(roleAdmin).Result()
 	if err != nil {
 		fmt.Println(err)
@@ -74,7 +74,7 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 		}
 	}
 
-	sigAdmin := redisClient.KeyName("perms:description:sig_admins")
+	sigAdmin := redisClient.KeyName("description:sig_admins")
 	exists, err = redisClient.Client.Exists(sigAdmin).Result()
 	if err != nil {
 		fmt.Println(err)
