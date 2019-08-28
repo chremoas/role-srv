@@ -12,6 +12,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/client"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"regexp"
@@ -38,7 +39,6 @@ type syncData struct {
 
 var syncControl chan syncData
 var clients clientList
-var botRole string
 var ignoredRoles []string
 var roleKeys = []string{"Name", "Color", "Hoist", "Position", "Permissions", "Managed", "Mentionable", "Sync"}
 var roleTypes = []string{"internal", "discord"}
@@ -50,11 +50,9 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 		discord: discord.NewDiscordGatewayService(config.LookupService("gateway", "discord"), c),
 	}
 
-	botRole = config.Bot.BotRole
-	ignoredRoles = config.Bot.IgnoredRoles
+	ignoredRoles = viper.GetStringSlice("bot.ignoredRoles")
 
-	addr := fmt.Sprintf("%s:%d", config.Redis.Host, config.Redis.Port)
-	redisClient := redis.Init(addr, config.Redis.Password, 0, config.LookupService("srv", "perms"))
+	redisClient := redis.Init(config.LookupService("srv", "perms"))
 
 	_, err := redisClient.Client.Ping().Result()
 	if err != nil {
@@ -755,7 +753,7 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 	}
 
 	ignoreSet := sets.NewStringSet()
-	ignoreSet.Add(botRole)
+	ignoreSet.Add(viper.GetString("bot.botRole"))
 	ignoreSet.Add("@everyone")
 	for i := range ignoredRoles {
 		ignoreSet.Add(ignoredRoles[i])
