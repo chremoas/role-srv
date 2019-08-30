@@ -20,6 +20,8 @@ func Init(prefix string) *Client {
 		c = redis.NewFailoverClient(&redis.FailoverOptions{
 			MasterName:    viper.GetString("redis.sentinelMasterName"),
 			SentinelAddrs: viper.GetStringSlice("redis.sentinels"),
+			Password: viper.GetString("redis.password"), // no password set
+			DB:       viper.GetInt("redis.database"),    // use default DB
 		})
 	} else {
 		c = redis.NewClient(&redis.Options{
