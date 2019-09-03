@@ -797,7 +797,7 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 		_, err := clients.discord.DeleteRole(ctx, &discord.DeleteRoleRequest{Name: r})
 
 		if err != nil {
-			msg := fmt.Sprintf("syncRoles: DeleteRole(): %s", err.Error())
+			msg := fmt.Sprintf("syncRoles: DeleteRole() Error Deleting '%s': %s", r, err.Error())
 			h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
 			sugar.Error(msg)
 			return err
