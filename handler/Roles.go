@@ -63,7 +63,7 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 	roleAdmin := redisClient.KeyName("description:role_admins")
 	exists, err := redisClient.Client.Exists(roleAdmin).Result()
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err.Error())
 	} else {
 		if exists == 0 {
 			log.Info("role_admins doesn't exist. Creating it.")
@@ -77,7 +77,7 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 	sigAdmin := redisClient.KeyName("description:sig_admins")
 	exists, err = redisClient.Client.Exists(sigAdmin).Result()
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err.Error())
 	} else {
 		if exists == 0 {
 			log.Info("sig_admins doesn't exist. Creating it.")
@@ -143,27 +143,27 @@ func (h *rolesHandler) AddRole(ctx context.Context, request *rolesrv.Role, respo
 
 	// Type, Name and the filters are required so let's check for those
 	if len(request.Type) == 0 {
-		return errors.New("Type is required.")
+		return errors.New("type is required")
 	}
 
 	if len(request.ShortName) == 0 {
-		return errors.New("ShortName is required.")
+		return errors.New("ShortName is required")
 	}
 
 	if len(request.Name) == 0 {
-		return errors.New("Name is required.")
+		return errors.New("Name is required")
 	}
 
 	if len(request.FilterA) == 0 {
-		return errors.New("FilterA is required.")
+		return errors.New("FilterA is required")
 	}
 
 	if len(request.FilterB) == 0 {
-		return errors.New("FilterB is required.")
+		return errors.New("FilterB is required")
 	}
 
 	if !validListItem(request.Type, roleTypes) {
-		return fmt.Errorf("`%s` isn't a valid Role Type.", request.Type)
+		return fmt.Errorf("`%s` isn't a valid Role Type", request.Type)
 	}
 
 	exists, err := h.Redis.Client.Exists(roleName).Result()
