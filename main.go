@@ -2,6 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/chremoas/role-srv/handler"
 	rolesrv "github.com/chremoas/role-srv/proto"
 	"github.com/chremoas/services-common/config"
@@ -15,6 +19,10 @@ var logger *zap.Logger
 var name = "role"
 
 func main() {
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
 	service = config.NewService(Version, "srv", name, initialize)
 	var err error
 
