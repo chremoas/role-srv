@@ -783,7 +783,7 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 				sugar.Debugf("syncRoles added: %s", r)
 				continue
 			} else {
-				msg := fmt.Sprintf("syncRoles: CreateRole(): %s", err.Error())
+				msg := fmt.Sprintf("syncRoles: CreateRole() attempting to create '%s': %s", r, err.Error())
 				h.sendMessage(ctx, channelId, common.SendFatal(msg), true)
 				sugar.Error(msg)
 				return err
