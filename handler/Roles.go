@@ -399,6 +399,7 @@ func (h *rolesHandler) sendMessage(ctx context.Context, channelId, message strin
 func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) error {
 	sugar := h.Logger.Sugar()
 	var roleNameMap = make(map[string]string)
+	var idToNameMap = make(map[string]string)
 	var discordMemberships = make(map[string]*sets.StringSet)
 	var chremoasMemberships = make(map[string]*sets.StringSet)
 	var updateMembers = make(map[string]*sets.StringSet)
@@ -427,6 +428,8 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 			if _, ok := discordMemberships[userId]; !ok {
 				discordMemberships[userId] = sets.NewStringSet()
 			}
+
+			idToNameMap[userId] = members.Members[m].User.Username
 
 			for r := range members.Members[m].Roles {
 				discordMemberships[userId].Add(members.Members[m].Roles[r].Name)
@@ -546,8 +549,6 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	t = time.Now()
 
 	for m := range chremoasMemberships {
-		var roleName string
-
 		if discordMemberships[m] == nil {
 			sugar.Debugf("not in discord: %v", m)
 			continue
@@ -555,55 +556,18 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 
 		// Get the list of memberships that are in chremoas but not discord (need to be added to discord)
 		diff := chremoasMemberships[m].Difference(discordMemberships[m])
-		if diff.Len() != 0 {
-			sugar.Infof("diff1: %v", diff)
-			// This is janky as hell but whaterver
-			for r, _ := range diff.Set {
-				roleName = r
-			}
-			for r := range chremoasMemberships[m].Set {
-				for i := range ignoredRoles {
-					if roleName == ignoredRoles[i] {
-						log.Infof("Ignoring: %s", ignoredRoles[i])
-						continue
-					}
-				}
+		diff2 := discordMemberships[m].Difference(chremoasMemberships[m])
 
-				if _, ok := updateMembers[m]; !ok {
-					updateMembers[m] = sets.NewStringSet()
+		if diff.Len() != 0 || diff2.Len() != 0 {
+			if !ignoreRole(idToNameMap[m]) {
+				for r := range chremoasMemberships[m].Set {
+					if _, ok := updateMembers[m]; !ok {
+						updateMembers[m] = sets.NewStringSet()
+					}
+					updateMembers[m].Add(roleNameMap[r])
 				}
-				updateMembers[m].Add(roleNameMap[r])
 			}
 		}
-
-		// TODO: Figure out if we really need this?
-		// Get the list of memberships in discord but not chremoas (need to be removed from discord)
-		diff = discordMemberships[m].Difference(chremoasMemberships[m])
-		if diff.Len() != 0 {
-			sugar.Infof("diff2: %v %v", diff, m)
-			// This is janky as hell but whaterver
-			for r, _ := range diff.Set {
-				roleName = r
-				for i := range ignoredRoles {
-					log.Infof("Checking %s == %s", roleName, ignoredRoles[i])
-					if roleName == ignoredRoles[i] {
-						log.Infof("Ignoring: %s", ignoredRoles[i])
-						continue
-					}
-				}
-			}
-
-			for r := range chremoasMemberships[m].Set {
-				if _, ok := updateMembers[m]; !ok {
-					updateMembers[m] = sets.NewStringSet()
-				}
-				updateMembers[m].Add(roleNameMap[r])
-			}
-		}
-
-		//if updateMembers[m] != nil {
-		//	sugar.Infof("m: %v updateMembers: %v", m, updateMembers[m])
-		//}
 	}
 
 	// Apply the membership sets to discord overwriting anything that's there.
@@ -647,30 +611,17 @@ func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) e
 	return nil
 }
 
-//func (h *rolesHandler) addRoleToSync(chremoasMemberships, discordMemberships map[string]*sets.StringSet, m string, roleNameMap map[string]string) string {
-//	sugar := h.Logger.Sugar()
-//	var roleName string
-//
-//	Get the list of memberships that are in chremoas but not discord (need to be added to discord)
-	//diff := chremoasMemberships[m].Difference(discordMemberships[m])
-	//if diff.Len() != 0 {
-	//	sugar.Infof("diff1: %v", diff)
-	//	This is janky as hell but whaterver
-		//for r, _ := range diff.Set {
-		//	roleName = r
-		//}
-		//for r := range chremoasMemberships[m].Set {
-		//	for i := range ignoredRoles {
-		//		if roleName == ignoredRoles[i] {
-		//			log.Infof("Ignoring: %s", ignoredRoles[i])
-		//			return nil
-		//		}
-		//	}
-		//
-		//	return roleNameMap[r]
-		//}
-	//}
-//}
+func ignoreRole(roleName string) bool {
+	for i := range ignoredRoles {
+		log.Infof("Checking %s == %s", roleName, ignoredRoles[i])
+		if roleName == ignoredRoles[i] {
+			log.Infof("Ignoring: %s", ignoredRoles[i])
+			return true
+		}
+	}
+
+	return false
+}
 
 func (h *rolesHandler) GetRoleMembership(ctx context.Context, request *rolesrv.RoleMembershipRequest, response *rolesrv.RoleMembershipResponse) error {
 	members, err := h.getRoleMembership(request.Name)
