@@ -1,6 +1,6 @@
 module github.com/chremoas/role-srv
 
-go 1.12
+go 1.14
 
 require (
 	github.com/chremoas/discord-gateway v1.2.5
@@ -9,7 +9,11 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/golang/protobuf v1.3.2
 	github.com/micro/go-micro v1.9.1
+	github.com/prometheus/common v0.6.0
 	github.com/spf13/viper v1.4.0
 	go.uber.org/zap v1.10.0
 	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80
 )
+
+replace github.com/chremoas/role-srv => ../role-srv
+replace github.com/hashicorp/consul => github.com/hashicorp/consul v1.5.1
