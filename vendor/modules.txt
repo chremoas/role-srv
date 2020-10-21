@@ -16,7 +16,7 @@ github.com/chremoas/discord-gateway/proto
 ## explicit
 github.com/chremoas/perms-srv/client
 github.com/chremoas/perms-srv/proto
-# github.com/chremoas/services-common v1.3.0
+# github.com/chremoas/services-common v1.3.1
 ## explicit
 github.com/chremoas/services-common/command
 github.com/chremoas/services-common/config
