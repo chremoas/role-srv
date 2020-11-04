@@ -11,7 +11,6 @@ import (
 	"github.com/chremoas/services-common/sets"
 	"github.com/fatih/structs"
 	"github.com/micro/go-micro"
-	"github.com/micro/go-micro/client"
 	"github.com/prometheus/common/log"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -23,9 +22,9 @@ import (
 )
 
 type rolesHandler struct {
-	Client client.Client
+	//Client client.Client
 	Redis  *redis.Client
-	Logger *zap.Logger
+	*zap.Logger
 }
 
 type clientList struct {
@@ -89,20 +88,20 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 		}
 	}
 
-	rh := &rolesHandler{Redis: redisClient, Logger: log}
+	rh := &rolesHandler{redisClient, log}
 
 	// Check and update Redis schema as needed
 	rh.updateSchema()
 
 	// Start sync thread
-	syncControl = make(chan syncData, 30)
+	syncControl = make(chan syncData, 5)
 	go rh.syncThread()
 
 	return rh
 }
 
 func (h *rolesHandler) updateSchema() {
-	sugar := h.Logger.Sugar()
+	sugar := h.Sugar()
 
 	// Update Roles hash
 	roles, err := h.getRoles()
@@ -385,7 +384,7 @@ func (h *rolesHandler) GetRole(ctx context.Context, request *rolesrv.Role, respo
 }
 
 func (h *rolesHandler) sendMessage(ctx context.Context, channelId, message string, sendMessage bool) {
-	sugar := h.Logger.Sugar()
+	sugar := h.Sugar()
 
 	if sendMessage {
 		_, err := clients.discord.SendMessage(ctx, &discord.SendMessageRequest{ChannelId: channelId, Message: message})
@@ -397,7 +396,7 @@ func (h *rolesHandler) sendMessage(ctx context.Context, channelId, message strin
 }
 
 func (h *rolesHandler) syncMembers(channelId, userId string, sendMessage bool) error {
-	sugar := h.Logger.Sugar()
+	sugar := h.Sugar()
 	var roleNameMap = make(map[string]string)
 	var idToNameMap = make(map[string]string)
 	var discordMemberships = make(map[string]*sets.StringSet)
@@ -705,7 +704,7 @@ func (h *rolesHandler) syncRoles(channelId, userId string, sendMessage bool) err
 	var matchDiscordError = regexp.MustCompile(`^The role '.*' already exists$`)
 	chremoasRoleSet := sets.NewStringSet()
 	discordRoleSet := sets.NewStringSet()
-	sugar := h.Logger.Sugar()
+	sugar := h.Sugar()
 	var chremoasRoleData = make(map[string]map[string]string)
 
 	chremoasRoles, err := h.getRoles()
@@ -1048,7 +1047,7 @@ func (h *rolesHandler) SyncToChatService(ctx context.Context, request *rolesrv.S
 
 func (h *rolesHandler) sendDualMessage(msg, channelId string, sendMessage bool) {
 	ctx := context.Background()
-	sugar := h.Logger.Sugar()
+	sugar := h.Sugar()
 
 	sugar.Info(msg)
 	h.sendMessage(ctx, channelId, common.SendSuccess(msg), sendMessage)
