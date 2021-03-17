@@ -23,7 +23,7 @@ import (
 
 type rolesHandler struct {
 	//Client client.Client
-	Redis  *redis.Client
+	Redis *redis.Client
 	*zap.Logger
 }
 
@@ -94,7 +94,7 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 	rh.updateSchema()
 
 	// Start sync thread
-	syncControl = make(chan syncData, 5)
+	syncControl = make(chan syncData, 1)
 	go rh.syncThread()
 
 	return rh
@@ -1061,7 +1061,10 @@ func (h *rolesHandler) syncThread() {
 
 		h.sendDualMessage("Starting Role Sync", request.ChannelId, request.SendMessage)
 
-		h.syncRoles(request.ChannelId, request.UserId, request.SendMessage)
+		err := h.syncRoles(request.ChannelId, request.UserId, request.SendMessage)
+		if err != nil {
+			h.Logger.Error(fmt.Sprintf("syncRoles error: %v", err))
+		}
 
 		msg := fmt.Sprintf("Completed Role Sync [%s]", time.Since(t1))
 		h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
@@ -1069,13 +1072,19 @@ func (h *rolesHandler) syncThread() {
 		t2 := time.Now()
 		h.sendDualMessage("Starting Member Sync", request.ChannelId, request.SendMessage)
 
-		h.syncMembers(request.ChannelId, request.UserId, request.SendMessage)
+		err = h.syncMembers(request.ChannelId, request.UserId, request.SendMessage)
+		if err != nil {
+			h.Logger.Error(fmt.Sprintf("syncMembers error: %v", err))
+		}
 
 		msg = fmt.Sprintf("Completed Member Sync [%s]", time.Since(t2))
 		h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
 
 		msg = fmt.Sprintf("Completed All Syncing [%s]", time.Since(t1))
 		h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
+
+		// Sleep 15 minutes after each sync
+		time.Sleep(15 * time.Minute)
 	}
 }
 

@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strconv"
+
 	permclient "github.com/chremoas/perms-srv/client"
 	permsrv "github.com/chremoas/perms-srv/proto"
-	rolesrv "github.com/chremoas/role-srv/proto"
 	common "github.com/chremoas/services-common/command"
 	"github.com/chremoas/services-common/sets"
 	"go.uber.org/zap"
-	"strconv"
+
+	rolesrv "github.com/chremoas/role-srv/proto"
 )
 
 type Roles struct {

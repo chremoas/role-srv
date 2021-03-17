@@ -1,11 +1,11 @@
 package client
 
 import (
+	"bytes"
+	"context"
+	"fmt"
 	rolesrv "github.com/chremoas/role-srv/proto"
 	"strings"
-	"fmt"
-	"context"
-	"bytes"
 )
 
 func (r Roles) GetSyncRequest(sender string, sendMessage bool) *rolesrv.SyncRequest {
@@ -15,12 +15,18 @@ func (r Roles) GetSyncRequest(sender string, sendMessage bool) *rolesrv.SyncRequ
 
 func (r Roles) MapName(ctx context.Context, members []string) (buffer bytes.Buffer, names []string, err error) {
 	users, err := r.RoleClient.GetDiscordUserList(ctx, &rolesrv.NilMessage{})
+	if err != nil {
+		fmt.Printf("GetDiscordUserList error: %v", err)
+		return buffer, nil, err
+	}
 	var found = false
 	var name string
 
 	for m := range members {
+		fmt.Printf("Checking member: %v", m)
 		if len(members[m]) > 0 {
 			for u := range users.Users {
+				fmt.Printf("Checking users: %v", u)
 				if members[m] == users.Users[u].Id {
 					if len(users.Users[u].Nick) != 0 {
 						name = users.Users[u].Nick
