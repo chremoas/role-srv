@@ -6,19 +6,19 @@ import (
 	"fmt"
 	"strconv"
 
-	permclient "github.com/chremoas/perms-srv/client"
-	permsrv "github.com/chremoas/perms-srv/proto"
+	permClient "github.com/chremoas/perms-srv/client"
+	permSrv "github.com/chremoas/perms-srv/proto"
 	common "github.com/chremoas/services-common/command"
 	"github.com/chremoas/services-common/sets"
 	"go.uber.org/zap"
 
-	rolesrv "github.com/chremoas/role-srv/proto"
+	roleSrv "github.com/chremoas/role-srv/proto"
 )
 
 type Roles struct {
-	RoleClient  rolesrv.RolesService
-	PermsClient permsrv.PermissionsService
-	Permissions *permclient.Permissions
+	RoleClient  roleSrv.RolesService
+	PermsClient permSrv.PermissionsService
+	Permissions *permClient.Permissions
 	Logger      *zap.Logger
 }
 
@@ -27,7 +27,7 @@ var clientType = map[bool]string{true: "SIG", false: "Role"}
 func (r Roles) ListRoles(ctx context.Context, all, sig bool) string {
 	var buffer bytes.Buffer
 	var roleList = make(map[string]string)
-	roles, err := r.RoleClient.GetRoles(ctx, &rolesrv.NilMessage{})
+	roles, err := r.RoleClient.GetRoles(ctx, &roleSrv.NilMessage{})
 
 	if err != nil {
 		return common.SendFatal(err.Error())
@@ -77,7 +77,7 @@ func (r Roles) AddRole(ctx context.Context, sender, shortName, roleType, filterA
 	}
 
 	_, err = r.RoleClient.AddRole(ctx,
-		&rolesrv.Role{
+		&roleSrv.Role{
 			Sig:       sig,
 			ShortName: shortName,
 			Type:      roleType,
@@ -110,7 +110,7 @@ func (r Roles) RemoveRole(ctx context.Context, sender, shortName string, sig boo
 	}
 
 	// Need to check if it's a sig or not
-	role, err := r.RoleClient.GetRole(ctx, &rolesrv.Role{ShortName: shortName})
+	role, err := r.RoleClient.GetRole(ctx, &roleSrv.Role{ShortName: shortName})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -119,7 +119,7 @@ func (r Roles) RemoveRole(ctx context.Context, sender, shortName string, sig boo
 		return common.SendError(fmt.Sprintf("'%s' doesn't exist", shortName))
 	}
 
-	_, err = r.RoleClient.RemoveRole(ctx, &rolesrv.Role{ShortName: shortName})
+	_, err = r.RoleClient.RemoveRole(ctx, &roleSrv.Role{ShortName: shortName})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -144,7 +144,7 @@ func (r Roles) RoleInfo(ctx context.Context, sender, shortName string, sig bool)
 		return common.SendError("User doesn't have permission to this command")
 	}
 
-	info, err := r.RoleClient.GetRole(ctx, &rolesrv.Role{ShortName: shortName})
+	info, err := r.RoleClient.GetRole(ctx, &roleSrv.Role{ShortName: shortName})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -199,7 +199,7 @@ func (r Roles) Set(ctx context.Context, sender, name, key, value string) string 
 		}
 	}
 
-	_, err := r.RoleClient.UpdateRole(ctx, &rolesrv.UpdateInfo{Name: name, Key: key, Value: value})
+	_, err := r.RoleClient.UpdateRole(ctx, &roleSrv.UpdateInfo{Name: name, Key: key, Value: value})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -213,7 +213,7 @@ func (r Roles) Set(ctx context.Context, sender, name, key, value string) string 
 }
 
 func (r Roles) GetMembers(ctx context.Context, role string) string {
-	members, err := r.RoleClient.GetRoleMembership(ctx, &rolesrv.RoleMembershipRequest{Name: role})
+	members, err := r.RoleClient.GetRoleMembership(ctx, &roleSrv.RoleMembershipRequest{Name: role})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -228,7 +228,7 @@ func (r Roles) GetMembers(ctx context.Context, role string) string {
 }
 
 func (r Roles) ListUserRoles(ctx context.Context, userid string, sig bool) string {
-	roles, err := r.RoleClient.ListUserRoles(ctx, &rolesrv.ListUserRolesRequest{UserId: userid})
+	roles, err := r.RoleClient.ListUserRoles(ctx, &roleSrv.ListUserRolesRequest{UserId: userid})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}

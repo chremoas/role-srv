@@ -4,13 +4,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	discord "github.com/chremoas/discord-gateway/proto"
 	common "github.com/chremoas/services-common/command"
 	"github.com/chremoas/services-common/config"
 	"github.com/micro/go-micro"
-	"github.com/prometheus/common/log"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
@@ -24,7 +22,7 @@ import (
 )
 
 type rolesHandler struct {
-	db *sqlx.DB
+	db sq.StatementBuilderType
 	*zap.Logger
 	clients   clientList
 	namespace string
@@ -41,13 +39,14 @@ type syncData struct {
 }
 
 var syncControl chan syncData
-var ignoredRoles []string
+
+//var ignoredRoles []string
 
 // Role keys are database columns we're allowed up update
 var roleKeys = []string{"Name", "Color", "Hoist", "Position", "Permissions", "Joinable", "Managed", "Mentionable", "Sync"}
 var roleTypes = []string{"internal", "discord"}
 
-func NewRolesHandler(config *config.Configuration, service micro.Service, log *zap.Logger) rolesrv.RolesHandler {
+func NewRolesHandler(config *config.Configuration, service micro.Service, log *zap.Logger) (rolesrv.RolesHandler, error) {
 	var (
 		sugar = log.Sugar()
 		err   error
@@ -58,26 +57,30 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 		discord: discord.NewDiscordGatewayService(config.LookupService("gateway", "discord"), c),
 	}
 
-	ignoredRoles = viper.GetStringSlice("bot.ignoredRoles")
+	//ignoredRoles = viper.GetStringSlice("bot.ignoredRoles")
 
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s %s",
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s",
 		viper.GetString("database.host"),
 		viper.GetInt("database.port"),
 		viper.GetString("database.username"),
 		viper.GetString("database.password"),
-		viper.GetString("database.database"),
-		viper.GetString("database.options"),
+		viper.GetString("database.roledb"),
 	)
 
-	db, err := sqlx.Connect(viper.GetString("database.driver"), dsn)
+	ldb, err := sqlx.Connect(viper.GetString("database.driver"), dsn)
 	if err != nil {
-		panic(err)
+		sugar.Error(err)
+		return nil, err
 	}
 
-	err = db.Ping()
+	err = ldb.Ping()
 	if err != nil {
-		panic(err)
+		sugar.Error(err)
+		return nil, err
 	}
+
+	dbCache := sq.NewStmtCache(ldb)
+	db := sq.StatementBuilder.PlaceholderFormat(sq.Dollar).RunWith(dbCache)
 
 	// Ensure required permissions exist in the database
 	var (
@@ -88,25 +91,31 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 		id int
 	)
 
-	tx := db.MustBegin()
-
 	for k, v := range requiredPermissions {
-		err = tx.Get(&id, "SELECT id FROM permissions WHERE namespace = $1 AND name = $2", config.Namespace, k)
+		err = db.Select("id").
+			From("permissions").
+			Where(sq.Eq{"name": k}).
+			Where(sq.Eq{"namespace": config.Namespace}).
+			QueryRow().Scan(&id)
 
 		switch err {
 		case nil:
-			sugar.Infof("%s found: %d", k, id)
+			sugar.Infof("%s (%d) found", k, id)
 		case sql.ErrNoRows:
 			sugar.Infof("%s NOT found, creating", k)
-			tx.MustExec("INSERT INTO permissions (namespace, name, description) VALUES ($1, $2, $3)", config.Namespace, k, v)
+			err = db.Insert("permissions").
+				Columns("namespace", "name", "description").
+				Values(config.Namespace, k, v).
+				Suffix("RETURNING \"id\"").
+				QueryRow().Scan(&id)
+			if err != nil {
+				sugar.Error(err)
+				return nil, err
+			}
 		default:
-			sugar.Infof("error: %s\n", err)
+			sugar.Error(err)
+			return nil, err
 		}
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		panic(err)
 	}
 
 	rh := &rolesHandler{
@@ -120,7 +129,7 @@ func NewRolesHandler(config *config.Configuration, service micro.Service, log *z
 	syncControl = make(chan syncData, 1)
 	go rh.syncThread()
 
-	return rh
+	return rh, nil
 }
 
 func (h *rolesHandler) GetRoleKeys(_ context.Context, _ *rolesrv.NilMessage, response *rolesrv.StringList) error {
@@ -133,7 +142,9 @@ func (h *rolesHandler) GetRoleTypes(_ context.Context, _ *rolesrv.NilMessage, re
 	return nil
 }
 
-func (h *rolesHandler) AddRole(_ context.Context, request *rolesrv.Role, _ *rolesrv.NilMessage) error {
+func (h *rolesHandler) AddRole(ctx context.Context, request *rolesrv.Role, _ *rolesrv.NilMessage) error {
+	var sugar = h.Sugar()
+
 	// Type, Name and ShortName are required so let's check for those
 	if len(request.Type) == 0 {
 		return errors.New("type is required")
@@ -151,23 +162,27 @@ func (h *rolesHandler) AddRole(_ context.Context, request *rolesrv.Role, _ *role
 		return fmt.Errorf("`%s` isn't a valid Role Type", request.Type)
 	}
 
-	rows, err := sq.Select("id").
+	rows, err := h.db.Select("id").
 		From("roles").
 		Where(sq.Eq{"role_nick": request.ShortName}).
 		Where(sq.Eq{"namespace": h.namespace}).
-		RunWith(h.db).Query()
+		Query()
 	if rows != nil {
-		defer rows.Close()
+		defer func() {
+			if err = rows.Close(); err != nil {
+				sugar.Error(err)
+			}
+		}()
 	}
-	//err := h.db.Get(&id, "SELECT id FROM roles WHERE role_nick = $1", request.ShortName)
+
 	switch err {
 	case nil:
 		return fmt.Errorf("role `%s` (%s) already exists", request.Name, request.ShortName)
 	case sql.ErrNoRows:
-		_, err = sq.Insert("roles").
+		_, err = h.db.Insert("roles").
 			Columns("namespace", "name", "role_nick", "chat_type").
 			Values(h.namespace, request.Name, request.ShortName, request.Type).
-			RunWith(h.db).Query()
+			Query()
 		if err != nil {
 			return fmt.Errorf("error adding role: %s", err)
 		}
@@ -175,10 +190,18 @@ func (h *rolesHandler) AddRole(_ context.Context, request *rolesrv.Role, _ *role
 		return fmt.Errorf("error: %s", err)
 	}
 
+	err = h.addDiscordRole(ctx, request.Name)
+	if err != nil {
+		sugar.Error(err)
+		return err
+	}
+
 	return nil
 }
 
-func (h *rolesHandler) UpdateRole(_ context.Context, request *rolesrv.UpdateInfo, _ *rolesrv.NilMessage) error {
+func (h *rolesHandler) UpdateRole(ctx context.Context, request *rolesrv.UpdateInfo, _ *rolesrv.NilMessage) error {
+	var sugar = h.Sugar()
+
 	if len(request.Name) == 0 {
 		return errors.New("name is required")
 	}
@@ -196,13 +219,20 @@ func (h *rolesHandler) UpdateRole(_ context.Context, request *rolesrv.UpdateInfo
 		return fmt.Errorf("`%s` isn't a valid role key", request.Key)
 	}
 
-	_, err := sq.Update("roles").
+	_, err := h.db.Update("roles").
 		Set(request.Key, request.Value).
 		Where(sq.Eq{"name": request.Name}).
 		Where(sq.Eq{"namespace": h.namespace}).
-		RunWith(h.db).Query()
+		Query()
 	if err != nil {
+		sugar.Error(err)
 		return fmt.Errorf("error updating role: %s", err)
+	}
+
+	err = h.updateDiscordRole(ctx, request.Key, request.Value)
+	if err != nil {
+		sugar.Error(err)
+		return err
 	}
 
 	return nil
@@ -217,17 +247,26 @@ func validListItem(a string, list []string) bool {
 	return false
 }
 
-func (h *rolesHandler) RemoveRole(_ context.Context, request *rolesrv.Role, _ *rolesrv.NilMessage) error {
+func (h *rolesHandler) RemoveRole(ctx context.Context, request *rolesrv.Role, _ *rolesrv.NilMessage) error {
+	var sugar = h.Sugar()
+
 	if len(request.ShortName) == 0 {
 		return errors.New("short name is required")
 	}
 
-	_, err := sq.Delete("roles").
+	_, err := h.db.Delete("roles").
 		Where(sq.Eq{"role_nick": request.ShortName}).
 		Where(sq.Eq{"namespace": h.namespace}).
-		RunWith(h.db).Query()
+		Query()
 	if err != nil {
+		sugar.Error(err)
 		return fmt.Errorf("error deleting role: %s", err)
+	}
+
+	err = h.removeDiscordRole(ctx, request.ShortName)
+	if err != nil {
+		sugar.Error(err)
+		return err
 	}
 
 	return nil
@@ -248,59 +287,102 @@ type Role struct {
 	Type        string `db:"chat_type"`
 }
 
-func (h *rolesHandler) GetRoles(_ context.Context, _ *rolesrv.NilMessage, response *rolesrv.GetRolesResponse) error {
-	rows, err := sq.Select("*").
-		From("roles").
-		RunWith(h.db).Query()
-	if err != nil {
-		return fmt.Errorf("error getting roles: %s", err)
-	}
-	defer rows.Close()
+func (h *rolesHandler) getRoles() (*rolesrv.GetRolesResponse, error) {
+	var (
+		rs        rolesrv.GetRolesResponse
+		sugar     = h.Sugar()
+		charTotal int
+	)
 
-	var role Role
-	for rows.Next() {
-		err = rows.Scan(&role)
-		if err != nil {
-			return fmt.Errorf("error scanning role row: %s", err)
+	rows, err := h.db.Select("role_nick", "name", "sig", "joinable", "sync").
+		From("roles").
+		Query()
+	if err != nil {
+		sugar.Error(err)
+		return nil, fmt.Errorf("error getting roles: %s", err)
+	}
+	defer func() {
+		if err = rows.Close(); err != nil {
+			sugar.Error(err)
 		}
-		response.Roles = append(response.Roles, &rolesrv.Role{
-			ShortName: role.ShortName,
-			Name:      role.Name,
-			Sig:       role.Sig,
-			Joinable:  role.Joinable,
-			Sync:      role.Sync,
+	}()
+
+	var shortName, name string
+	var sig, joinable, sync bool
+	for rows.Next() {
+		err = rows.Scan(&shortName, &name, &sig, &joinable, &sync)
+		if err != nil {
+			sugar.Error(err)
+			return nil, fmt.Errorf("error scanning role row: %s", err)
+		}
+		charTotal += len(shortName) + len(name) + 15 // Guessing on bool excess
+		rs.Roles = append(rs.Roles, &rolesrv.Role{
+			ShortName: shortName,
+			Name:      name,
+			Sig:       sig,
+			Joinable:  joinable,
+			Sync:      sync,
 		})
 	}
 
-	return nil
+	if charTotal >= 2000 {
+		return nil, errors.New("too many roles (exceeds Discord 2k character limit)")
+	}
+
+	return &rs, nil
 }
 
-func (h *rolesHandler) GetRole(_ context.Context, request *rolesrv.Role, response *rolesrv.Role) error {
-	var role Role
-
-	err := sq.Select("*").
-		From("roles").
-		Where(sq.Eq{"role_nick": request.ShortName}).
-		Where(sq.Eq{"namespace": h.namespace}).
-		RunWith(h.db).QueryRow().Scan(&role)
+func (h *rolesHandler) GetRoles(_ context.Context, _ *rolesrv.NilMessage, response *rolesrv.GetRolesResponse) error {
+	roles, err := h.getRoles()
 	if err != nil {
 		return fmt.Errorf("error getting roles: %s", err)
 	}
 
-	response = &rolesrv.Role{
-		ShortName:   role.ShortName,
-		Type:        role.Type,
-		Name:        role.Name,
-		Color:       role.Color,
-		Hoist:       role.Hoist,
-		Position:    role.Position,
-		Permissions: role.Permissions,
-		Managed:     role.Managed,
-		Mentionable: role.Mentionable,
-		Sig:         role.Sig,
-		Joinable:    role.Joinable,
-		Sync:        role.Sync,
+	response = roles
+	return nil
+}
+
+func (h *rolesHandler) getRole(shortName string) (rolesrv.Role, error) {
+	var (
+		chatType, name                                   string
+		color, position, permissions                     int32
+		hoist, managed, mentionable, sig, joinable, sync bool
+	)
+
+	err := h.db.Select("type", "name", "color", "hoist", "postion", "permissions", "managed",
+		"mentionable", "sig", "joinable", "sync").
+		From("roles").
+		Where(sq.Eq{"role_nick": shortName}).
+		Where(sq.Eq{"namespace": h.namespace}).
+		QueryRow().Scan(&chatType, &name, &color, &hoist, &position, &permissions, &managed,
+		&mentionable, &sig, &joinable, &sync)
+	if err != nil {
+		return rolesrv.Role{}, fmt.Errorf("error getting roles: %s", err)
 	}
+
+	return rolesrv.Role{
+		ShortName:   shortName,
+		Type:        chatType,
+		Name:        name,
+		Color:       color,
+		Hoist:       hoist,
+		Position:    position,
+		Permissions: permissions,
+		Managed:     managed,
+		Mentionable: mentionable,
+		Sig:         sig,
+		Joinable:    joinable,
+		Sync:        sync,
+	}, nil
+}
+
+func (h *rolesHandler) GetRole(_ context.Context, request *rolesrv.Role, response *rolesrv.Role) error {
+	role, err := h.getRole(request.ShortName)
+	if err != nil {
+		return fmt.Errorf("error getting roles: %s", err)
+	}
+
+	response = &role
 	return nil
 }
 
@@ -316,23 +398,25 @@ func (h *rolesHandler) sendMessage(ctx context.Context, channelId, message strin
 	}
 }
 
-func ignoreRole(roleName string) bool {
-	for i := range ignoredRoles {
-		log.Infof("Checking %s == %s", roleName, ignoredRoles[i])
-		if roleName == ignoredRoles[i] {
-			log.Infof("Ignoring: %s", ignoredRoles[i])
-			return true
-		}
-	}
-
-	return false
-}
+// This is part of sync
+//func ignoreRole(roleName string) bool {
+//	for i := range ignoredRoles {
+//		log.Infof("Checking %s == %s", roleName, ignoredRoles[i])
+//		if roleName == ignoredRoles[i] {
+//			log.Infof("Ignoring: %s", ignoredRoles[i])
+//			return true
+//		}
+//	}
+//
+//	return false
+//}
 
 func (h *rolesHandler) GetRoleMembership(_ context.Context, request *rolesrv.RoleMembershipRequest, response *rolesrv.RoleMembershipResponse) error {
 	var (
-		err error
-		id int
-		user_id int
+		err    error
+		id     int
+		userID int
+		sugar  = h.Sugar()
 	)
 
 	id, err = h.getRoleID(request.Name)
@@ -340,20 +424,25 @@ func (h *rolesHandler) GetRoleMembership(_ context.Context, request *rolesrv.Rol
 		return fmt.Errorf("error getting filter ID (%s): %s", request.Name, err)
 	}
 
-	rows, err := sq.Select("user_id").
+	rows, err := h.db.Select("user_id").
 		From("filter_membership").
-		Join("role_filters USING (filter)").
+		InnerJoin("role_filters USING (filter)").
 		Where(sq.Eq{"role_filters.role": id}).
 		Where(sq.Eq{"namespace": h.namespace}).
-		RunWith(h.db).Query()
+		Query()
+	if err != nil {
+		sugar.Error(err)
+		return err
+	}
 
 	for rows.Next() {
-		err := rows.Scan(&user_id)
+		err = rows.Scan(&userID)
 		if err != nil {
+			sugar.Error(err)
 			return fmt.Errorf("error scanning user_id (%s): %s", request.Name, err)
 		}
 
-		response.Members = append(response.Members, fmt.Sprintf("%d", user_id))
+		response.Members = append(response.Members, fmt.Sprintf("%d", userID))
 	}
 
 	return nil
@@ -363,36 +452,54 @@ func (h *rolesHandler) GetRoleMembership(_ context.Context, request *rolesrv.Rol
 // Filter related stuff
 //
 
-type Filter struct {
-	Name        string `db:"name"`
-	Description string `db:"description"`
-}
-
 func (h *rolesHandler) GetFilters(_ context.Context, _ *rolesrv.NilMessage, response *rolesrv.FilterList) error {
-	rows, err := sq.Select("*").
+	var (
+		sugar             = h.Sugar()
+		name, description string
+		charTotal         int
+	)
+
+	rows, err := h.db.Select("name", "description").
 		From("filters").
-		RunWith(h.db).Query()
+		Where(sq.Eq{"namespace": h.namespace}).
+		Query()
 	if err != nil {
+		sugar.Error(err)
 		return fmt.Errorf("error getting filters: %s", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err = rows.Close(); err != nil {
+			sugar.Error(err)
+		}
+	}()
 
-	var filter Filter
 	for rows.Next() {
-		err = rows.Scan(&filter)
+		err = rows.Scan(&name, &description)
 		if err != nil {
+			sugar.Error(err)
 			return fmt.Errorf("error scanning filter row: %s", err)
 		}
+		charTotal += len(name) + len(description)
 		response.FilterList = append(response.FilterList, &rolesrv.Filter{
-			Name:        filter.Name,
-			Description: filter.Description,
+			Name:        name,
+			Description: description,
 		})
+	}
+
+	if len(response.FilterList) == 0 {
+		return errors.New("no filters")
+	}
+
+	if charTotal >= 2000 {
+		return errors.New("too many filters (exceeds Discord 2k character limit)")
 	}
 
 	return nil
 }
 
 func (h *rolesHandler) AddFilter(_ context.Context, request *rolesrv.Filter, _ *rolesrv.NilMessage) error {
+	var sugar = h.Sugar()
+
 	if len(request.Name) == 0 {
 		return errors.New("name is required")
 	}
@@ -401,11 +508,13 @@ func (h *rolesHandler) AddFilter(_ context.Context, request *rolesrv.Filter, _ *
 		return errors.New("description is required")
 	}
 
-	_, err := sq.Insert("filters").
-		Columns("name", "description").
-		Values(request.Name, request.Description).
-		RunWith(h.db).Query()
+	_, err := h.db.Insert("filters").
+		Columns("namespace", "name", "description").
+		Values(h.namespace, request.Name, request.Description).
+		Query()
 	if err != nil {
+		// TODO: Catch `pq: duplicate key value violates unique constraint` and return a friendly error
+		sugar.Error(err)
 		return fmt.Errorf("error adding filter (%s): %s", request.Name, err)
 	}
 
@@ -414,15 +523,21 @@ func (h *rolesHandler) AddFilter(_ context.Context, request *rolesrv.Filter, _ *
 
 func (h rolesHandler) getFilterID(name string) (int, error) {
 	var (
-		err error
-		id int
+		err   error
+		id    int
+		sugar = h.Sugar()
 	)
 
-	err = sq.Select("id").
+	if name == "" {
+		return 0, errors.New("getFilterID: name is required")
+	}
+
+	sugar.Infof("Looking up filter: %s", name)
+	err = h.db.Select("id").
 		From("filters").
 		Where(sq.Eq{"name": name}).
 		Where(sq.Eq{"namespace": h.namespace}).
-		RunWith(h.db).QueryRow().Scan(&id)
+		QueryRow().Scan(&id)
 
 	return id, err
 }
@@ -430,44 +545,48 @@ func (h rolesHandler) getFilterID(name string) (int, error) {
 func (h rolesHandler) getRoleID(name string) (int, error) {
 	var (
 		err error
-		id int
+		id  int
 	)
 
-	err = sq.Select("id").
+	err = h.db.Select("id").
 		From("roles").
 		Where(sq.Eq{"name": name}).
 		Where(sq.Eq{"namespace": h.namespace}).
-		RunWith(h.db).QueryRow().Scan(&id)
+		QueryRow().Scan(&id)
 
 	return id, err
 }
 
 func (h *rolesHandler) RemoveFilter(_ context.Context, request *rolesrv.Filter, _ *rolesrv.NilMessage) error {
 	var (
-		err error
-		id int
+		err   error
+		id    int
+		sugar = h.Sugar()
 	)
 
 	id, err = h.getFilterID(request.Name)
 	if err != nil {
+		sugar.Error(err)
 		return fmt.Errorf("error getting filter ID (%s): %s", request.Name, err)
 	}
 
 	// Delete all the filter members
-	_, err = sq.Delete("filter_members").
+	_, err = h.db.Delete("filter_membership").
 		Where(sq.Eq{"filter": id}).
 		Where(sq.Eq{"namespace": h.namespace}).
-		RunWith(h.db).Query()
+		Query()
 	if err != nil {
+		sugar.Error(err)
 		return fmt.Errorf("error deleting filter members (%s): %s", request.Name, err)
 	}
 
 	// Delete the filter
-	_, err = sq.Delete("filters").
+	_, err = h.db.Delete("filters").
 		Where(sq.Eq{"name": request.Name}).
 		Where(sq.Eq{"namespace": h.namespace}).
-		RunWith(h.db).Query()
+		Query()
 	if err != nil {
+		sugar.Error(err)
 		return fmt.Errorf("error deleting filter (%s): %s", request.Name, err)
 	}
 
@@ -477,33 +596,54 @@ func (h *rolesHandler) RemoveFilter(_ context.Context, request *rolesrv.Filter, 
 // TODO: Rename this GetFilterMembers
 func (h *rolesHandler) GetMembers(_ context.Context, request *rolesrv.Filter, response *rolesrv.MemberList) error {
 	var (
-		err error
-		id int
+		err    error
+		id     int
 		userId int
+		sugar  = h.Sugar()
 	)
+
+	if request.Name == "" {
+		return errors.New("name is required")
+	}
 
 	id, err = h.getFilterID(request.Name)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			sugar.Info("Filter '%s' doesn't exist in namespace '%s'", request.Name, h.namespace)
+			return fmt.Errorf("filter doesn't exist: %s", request.Name)
+		}
+		sugar.Error(err)
 		return fmt.Errorf("error getting filter ID (%s): %s", request.Name, err)
 	}
 
-	rows, err := sq.Select("user_id").
+	rows, err := h.db.Select("user_id").
 		From("filter_membership").
 		Where(sq.Eq{"id": id}).
 		Where(sq.Eq{"namespace": h.namespace}).
-		RunWith(h.db).Query()
+		Query()
 	if err != nil {
+		sugar.Error(err)
 		return fmt.Errorf("error getting filter members (%s): %s", request.Name, err)
 	}
+	defer func() {
+		if err = rows.Close(); err != nil {
+			sugar.Error(err)
+		}
+	}()
 
 	for rows.Next() {
 		err = rows.Scan(userId)
 		if err != nil {
+			sugar.Error(err)
 			return fmt.Errorf("error scanning filter member id (%s): %s", request.Name, err)
 		}
 
 		// TODO: Maybe this should be a int in the protobuf
 		response.Members = append(response.Members, fmt.Sprintf("%d", userId))
+	}
+
+	if len(response.Members) == 0 {
+		return errors.New("no filter members")
 	}
 
 	return nil
@@ -512,21 +652,24 @@ func (h *rolesHandler) GetMembers(_ context.Context, request *rolesrv.Filter, re
 // TODO: Rename this AddFilterMembers
 func (h *rolesHandler) AddMembers(_ context.Context, request *rolesrv.Members, _ *rolesrv.NilMessage) error {
 	var (
-		err error
-		id int
+		err   error
+		id    int
+		sugar = h.Sugar()
 	)
 
 	id, err = h.getFilterID(request.Filter)
 	if err != nil {
+		sugar.Error(err)
 		return fmt.Errorf("error getting filter ID (%s): %s", request.Name, err)
 	}
 
 	for _, member := range request.Name {
-		_, err = sq.Insert("filter_membership").
+		_, err = h.db.Insert("filter_membership").
 			Columns("namespace", "filter", "user_id").
-			Values(h.namespace, id, member).RunWith(h.db).Query()
+			Values(h.namespace, id, member).Query()
 		if err != nil {
 			// TODO: I need to catch and ignore already exists
+			sugar.Error(err)
 			return fmt.Errorf("error adding filter members (%s): %s", request.Name, err)
 		}
 	}
@@ -537,22 +680,25 @@ func (h *rolesHandler) AddMembers(_ context.Context, request *rolesrv.Members, _
 // TODO: Rename this RemoveFilterMembers
 func (h *rolesHandler) RemoveMembers(_ context.Context, request *rolesrv.Members, _ *rolesrv.NilMessage) error {
 	var (
-		err error
-		id int
+		err   error
+		id    int
+		sugar = h.Sugar()
 	)
 
 	id, err = h.getFilterID(request.Filter)
 	if err != nil {
+		sugar.Error(err)
 		return fmt.Errorf("error getting filter ID (%s): %s", request.Name, err)
 	}
 
 	for _, member := range request.Name {
-		_, err = sq.Delete("filter_membership").
+		_, err = h.db.Delete("filter_membership").
 			Where(sq.Eq{"user_id": member}).
 			Where(sq.Eq{"filter": id}).
 			Where(sq.Eq{"namespace": h.namespace}).
-			RunWith(h.db).Query()
+			Query()
 		if err != nil {
+			sugar.Error(err)
 			return fmt.Errorf("error removing filter members (%s): %s", request.Name, err)
 		}
 	}
@@ -579,10 +725,10 @@ func (h *rolesHandler) GetDiscordUser(ctx context.Context, request *rolesrv.GetD
 		}
 	}
 
-	return errors.New("User not found")
+	return errors.New("user not found")
 }
 
-func (h *rolesHandler) GetDiscordUserList(ctx context.Context, request *rolesrv.NilMessage, response *rolesrv.GetDiscordUserListResponse) error {
+func (h *rolesHandler) GetDiscordUserList(ctx context.Context, _ *rolesrv.NilMessage, response *rolesrv.GetDiscordUserListResponse) error {
 	members, err := h.clients.discord.GetAllMembersAsSlice(ctx, &discord.GetAllMembersRequest{})
 	if err != nil {
 		return err
@@ -605,8 +751,9 @@ func (h *rolesHandler) GetDiscordUserList(ctx context.Context, request *rolesrv.
 	return nil
 }
 
-func (h *rolesHandler) SyncToChatService(ctx context.Context, request *rolesrv.SyncRequest, response *rolesrv.NilMessage) error {
-	syncControl <- syncData{ChannelId: request.ChannelId, UserId: request.UserId, SendMessage: request.SendMessage}
+func (h *rolesHandler) SyncToChatService(_ context.Context, _ *rolesrv.SyncRequest, _ *rolesrv.NilMessage) error {
+	//syncControl <- syncData{ChannelId: request.ChannelId, UserId: request.UserId, SendMessage: request.SendMessage}
+	// This is a no-op now
 	return nil
 }
 
@@ -621,71 +768,88 @@ func (h *rolesHandler) sendDualMessage(msg, channelId string, sendMessage bool) 
 func (h *rolesHandler) syncThread() {
 	for {
 		request := <-syncControl
+		h.sendDualMessage("This command does nothing for now", request.ChannelId, request.SendMessage)
 
-		t1 := time.Now()
-
-		h.sendDualMessage("Starting Role Sync", request.ChannelId, request.SendMessage)
-
-		err := h.syncRoles(request.ChannelId, request.UserId, request.SendMessage)
-		if err != nil {
-			h.Logger.Error(fmt.Sprintf("syncRoles error: %v", err))
-		}
-
-		msg := fmt.Sprintf("Completed Role Sync [%s]", time.Since(t1))
-		h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
-
-		t2 := time.Now()
-		h.sendDualMessage("Starting Member Sync", request.ChannelId, request.SendMessage)
-
-		err = h.syncMembers(request.ChannelId, request.UserId, request.SendMessage)
-		if err != nil {
-			h.Logger.Error(fmt.Sprintf("syncMembers error: %v", err))
-		}
-
-		msg = fmt.Sprintf("Completed Member Sync [%s]", time.Since(t2))
-		h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
-
-		msg = fmt.Sprintf("Completed All Syncing [%s]", time.Since(t1))
-		h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
+		//t1 := time.Now()
+		//
+		//h.sendDualMessage("Starting Role Sync", request.ChannelId, request.SendMessage)
+		//
+		//err := h.syncRoles(request.ChannelId, request.UserId, request.SendMessage)
+		//if err != nil {
+		//	h.Logger.Error(fmt.Sprintf("syncRoles error: %v", err))
+		//}
+		//
+		//msg := fmt.Sprintf("Completed Role Sync [%s]", time.Since(t1))
+		//h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
+		//
+		//t2 := time.Now()
+		//h.sendDualMessage("Starting Member Sync", request.ChannelId, request.SendMessage)
+		//
+		//err = h.syncMembers(request.ChannelId, request.UserId, request.SendMessage)
+		//if err != nil {
+		//	h.Logger.Error(fmt.Sprintf("syncMembers error: %v", err))
+		//}
+		//
+		//msg = fmt.Sprintf("Completed Member Sync [%s]", time.Since(t2))
+		//h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
+		//
+		//msg = fmt.Sprintf("Completed All Syncing [%s]", time.Since(t1))
+		//h.sendDualMessage(msg, request.ChannelId, request.SendMessage)
 
 		// Sleep 15 minutes after each sync
 		//time.Sleep(15 * time.Minute)
 	}
 }
 
-func (h *rolesHandler) ListUserRoles(ctx context.Context, request *rolesrv.ListUserRolesRequest, response *rolesrv.ListUserRolesResponse) error {
-	rows, err := sq.Select("roles.*").
+func (h *rolesHandler) ListUserRoles(_ context.Context, request *rolesrv.ListUserRolesRequest, response *rolesrv.ListUserRolesResponse) error {
+	var (
+		shortName, chatType, name                        string
+		color, position, permissions                     int32
+		hoist, managed, mentionable, sig, joinable, sync bool
+
+		sugar = h.Sugar()
+	)
+
+	rows, err := h.db.Select("roles.shortName", "roles.chatType", "roles.name", "roles.color",
+		"roles.hoist", "roles.position", "roles.permissions", "roles.managed", "roles.mentionable",
+		"roles.sig", "roles.joinable", "roles.sync").
 		From("filters").
 		Join("filter_membership ON filters.id = filter_membership.filter").
 		Join("roles_filters ON filters.id = role_filters.filter").
 		Join("roles ON roles_filters.role = roles.id").
 		Where(sq.Eq{"filter_membership.user_id": request.UserId}).
 		Where(sq.Eq{"namespace": h.namespace}).
-		RunWith(h.db).Query()
+		Query()
 	if err != nil {
+		sugar.Error(err)
 		return fmt.Errorf("error getting user roles (%s): %s", request.UserId, err)
 	}
+	defer func() {
+		if err = rows.Close(); err != nil {
+			sugar.Error(err)
+		}
+	}()
 
-	var role Role
 	for rows.Next() {
-		err = rows.Scan(&role)
+		err = rows.Scan(&shortName, &chatType, &name, &color, &hoist, &position, &permissions, &managed,
+			&mentionable, &sig, &joinable, &sync)
 		if err != nil {
 			return fmt.Errorf("error scanning role for userID (%s): %s", request.UserId, err)
 		}
 
 		response.Roles = append(response.Roles, &rolesrv.Role{
-			ShortName:   role.ShortName,
-			Type:        role.Type,
-			Name:        role.Name,
-			Color:       role.Color,
-			Hoist:       role.Hoist,
-			Position:    role.Position,
-			Permissions: role.Permissions,
-			Managed:     role.Managed,
-			Mentionable: role.Mentionable,
-			Sig:         role.Sig,
-			Joinable:    role.Joinable,
-			Sync:        role.Sync,
+			ShortName:   shortName,
+			Type:        chatType,
+			Name:        name,
+			Color:       color,
+			Hoist:       hoist,
+			Position:    position,
+			Permissions: permissions,
+			Managed:     managed,
+			Mentionable: mentionable,
+			Sig:         sig,
+			Joinable:    joinable,
+			Sync:        sync,
 		})
 	}
 

@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	rolesrv "github.com/chremoas/role-srv/proto"
 	"strings"
+
+	roleSrv "github.com/chremoas/role-srv/proto"
 )
 
-func (r Roles) GetSyncRequest(sender string, sendMessage bool) *rolesrv.SyncRequest {
+func (r Roles) GetSyncRequest(sender string, sendMessage bool) *roleSrv.SyncRequest {
 	s := strings.Split(sender, ":")
-	return &rolesrv.SyncRequest{ChannelId: s[0], UserId: s[1], SendMessage: sendMessage}
+	return &roleSrv.SyncRequest{ChannelId: s[0], UserId: s[1], SendMessage: sendMessage}
 }
 
 func (r Roles) MapName(ctx context.Context, members []string) (buffer bytes.Buffer, names []string, err error) {
-	users, err := r.RoleClient.GetDiscordUserList(ctx, &rolesrv.NilMessage{})
+	users, err := r.RoleClient.GetDiscordUserList(ctx, &roleSrv.NilMessage{})
 	if err != nil {
 		fmt.Printf("GetDiscordUserList error: %v", err)
 		return buffer, nil, err
