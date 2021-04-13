@@ -39,6 +39,7 @@ CREATE TABLE roles
     sig         BOOL                           DEFAULT FALSE,
     sync        BOOL                           DEFAULT FALSE,
     chat_type   VARCHAR(32)           NOT NULL DEFAULT 'discord',
+    chat_id     BIGINT                         DEFAULT 0, --- this should probably be `id` but I need to write something to get all the chat ids for that
     inserted    TIMESTAMP             NOT NULL DEFAULT NOW(),
     updated     TIMESTAMP             NOT NULL DEFAULT NOW()
 );

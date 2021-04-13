@@ -29,19 +29,14 @@ func (r Roles) LeaveSIG(ctx context.Context, sender, sig string) string {
 func (r Roles) sigAction(ctx context.Context, sender, sig string, join, joinable bool) string {
 	s := strings.Split(sender, ":")
 
-	foo, err := r.RoleClient.GetRole(ctx, &roleSrv.Role{ShortName: sig})
-	if err != nil {
-		return common.SendError(err.Error())
-	}
-
-	if !foo.Sig {
-		return common.SendError("Not a SIG")
-	}
-
 	// get the filter from the role
 	role, err := r.RoleClient.GetRole(ctx, &roleSrv.Role{ShortName: sig})
 	if err != nil {
 		return common.SendError(err.Error())
+	}
+
+	if !role.Sig {
+		return common.SendError("Not a SIG")
 	}
 
 	// Is this a joinable role? Only check on Join/Leave not Add/Remove
