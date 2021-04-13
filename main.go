@@ -48,6 +48,11 @@ func main() {
 }
 
 func initialize(config *config.Configuration) error {
-	rolesrv.RegisterRolesHandler(service.Server(), handler.NewRolesHandler(config, service, logger))
+	h, err := handler.NewRolesHandler(config, service, logger)
+	if err != nil {
+		return err
+	}
+
+	rolesrv.RegisterRolesHandler(service.Server(), h)
 	return nil
 }

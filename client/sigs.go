@@ -3,9 +3,11 @@ package client
 import (
 	"context"
 	"fmt"
-	rolesrv "github.com/chremoas/role-srv/proto"
-	common "github.com/chremoas/services-common/command"
 	"strings"
+
+	common "github.com/chremoas/services-common/command"
+
+	roleSrv "github.com/chremoas/role-srv/proto"
 )
 
 func (r Roles) AddSIG(ctx context.Context, sender, sig string) string {
@@ -27,19 +29,14 @@ func (r Roles) LeaveSIG(ctx context.Context, sender, sig string) string {
 func (r Roles) sigAction(ctx context.Context, sender, sig string, join, joinable bool) string {
 	s := strings.Split(sender, ":")
 
-	foo, err := r.RoleClient.GetRole(ctx, &rolesrv.Role{ShortName: sig})
+	// get the filter from the role
+	role, err := r.RoleClient.GetRole(ctx, &roleSrv.Role{ShortName: sig})
 	if err != nil {
 		return common.SendError(err.Error())
 	}
 
-	if !foo.Sig {
+	if !role.Sig {
 		return common.SendError("Not a SIG")
-	}
-
-	// get the filter from from the role
-	role, err := r.RoleClient.GetRole(ctx, &rolesrv.Role{ShortName: sig})
-	if err != nil {
-		return common.SendError(err.Error())
 	}
 
 	// Is this a joinable role? Only check on Join/Leave not Add/Remove
@@ -51,9 +48,9 @@ func (r Roles) sigAction(ctx context.Context, sender, sig string, join, joinable
 
 	// add member to role
 	if join {
-		_, err = r.RoleClient.AddMembers(ctx, &rolesrv.Members{Name: []string{s[1]}, Filter: role.FilterB})
+		_, err = r.RoleClient.AddMembers(ctx, &roleSrv.Members{Name: []string{s[1]}, Filter: role.FilterB})
 	} else {
-		_, err = r.RoleClient.RemoveMembers(ctx, &rolesrv.Members{Name: []string{s[1]}, Filter: role.FilterB})
+		_, err = r.RoleClient.RemoveMembers(ctx, &roleSrv.Members{Name: []string{s[1]}, Filter: role.FilterB})
 	}
 	if err != nil {
 		return common.SendError(err.Error())

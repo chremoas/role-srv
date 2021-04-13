@@ -1,3 +1,6 @@
+# github.com/Masterminds/squirrel v1.5.0
+## explicit
+github.com/Masterminds/squirrel
 # github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 github.com/alecthomas/template
 github.com/alecthomas/template/parse
@@ -23,7 +26,6 @@ github.com/chremoas/perms-srv/proto
 github.com/chremoas/services-common/command
 github.com/chremoas/services-common/config
 github.com/chremoas/services-common/prometheus
-github.com/chremoas/services-common/redis
 github.com/chremoas/services-common/sets
 # github.com/coreos/etcd v3.3.13+incompatible
 github.com/coreos/etcd/client
@@ -33,22 +35,11 @@ github.com/coreos/etcd/pkg/types
 github.com/coreos/etcd/version
 # github.com/coreos/go-semver v0.2.0
 github.com/coreos/go-semver/semver
-# github.com/fatih/structs v1.1.0
-## explicit
-github.com/fatih/structs
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
 # github.com/go-log/log v0.1.0
 github.com/go-log/log
 github.com/go-log/log/log
-# github.com/go-redis/redis v6.15.2+incompatible
-github.com/go-redis/redis
-github.com/go-redis/redis/internal
-github.com/go-redis/redis/internal/consistenthash
-github.com/go-redis/redis/internal/hashtag
-github.com/go-redis/redis/internal/pool
-github.com/go-redis/redis/internal/proto
-github.com/go-redis/redis/internal/util
 # github.com/golang/mock v1.3.1
 github.com/golang/mock/gomock
 # github.com/golang/protobuf v1.3.2
@@ -98,10 +89,23 @@ github.com/hashicorp/hcl/json/token
 github.com/hashicorp/memberlist
 # github.com/hashicorp/serf v0.8.3
 github.com/hashicorp/serf/coordinate
+# github.com/jmoiron/sqlx v1.3.1
+## explicit
+github.com/jmoiron/sqlx
+github.com/jmoiron/sqlx/reflectx
 # github.com/json-iterator/go v1.1.7
 github.com/json-iterator/go
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
+# github.com/lann/builder v0.0.0-20180802200727-47ae307949d0
+github.com/lann/builder
+# github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0
+github.com/lann/ps
+# github.com/lib/pq v1.10.0
+## explicit
+github.com/lib/pq
+github.com/lib/pq/oid
+github.com/lib/pq/scram
 # github.com/lucas-clemente/quic-go v0.12.0
 github.com/lucas-clemente/quic-go
 github.com/lucas-clemente/quic-go/internal/ackhandler

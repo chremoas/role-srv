@@ -1,12 +1,14 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	rolesrv "github.com/chremoas/role-srv/proto"
-	common "github.com/chremoas/services-common/command"
-	"bytes"
 	"time"
+
+	common "github.com/chremoas/services-common/command"
+
+	roleSrv "github.com/chremoas/role-srv/proto"
 )
 
 func (r Roles) AddFilter(ctx context.Context, sender, filterName, filterDescription string) string {
@@ -27,7 +29,7 @@ func (r Roles) AddFilter(ctx context.Context, sender, filterName, filterDescript
 		return common.SendError("User doesn't have permission to this command")
 	}
 
-	_, err = r.RoleClient.AddFilter(ctx, &rolesrv.Filter{Name: filterName, Description: filterDescription})
+	_, err = r.RoleClient.AddFilter(ctx, &roleSrv.Filter{Name: filterName, Description: filterDescription})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -37,7 +39,7 @@ func (r Roles) AddFilter(ctx context.Context, sender, filterName, filterDescript
 
 func (r Roles) ListFilters(ctx context.Context) string {
 	var buffer bytes.Buffer
-	filters, err := r.RoleClient.GetFilters(ctx, &rolesrv.NilMessage{})
+	filters, err := r.RoleClient.GetFilters(ctx, &roleSrv.NilMessage{})
 
 	if err != nil {
 		return common.SendFatal(err.Error())
@@ -65,7 +67,7 @@ func (r Roles) RemoveFilter(ctx context.Context, sender, name string) string {
 		return common.SendError("User doesn't have permission to this command")
 	}
 
-	_, err = r.RoleClient.RemoveFilter(ctx, &rolesrv.Filter{Name: name})
+	_, err = r.RoleClient.RemoveFilter(ctx, &roleSrv.Filter{Name: name})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -76,7 +78,7 @@ func (r Roles) RemoveFilter(ctx context.Context, sender, name string) string {
 func (r Roles) ListMembers(ctx context.Context, name string) string {
 	t := time.Now()
 
-	members, err := r.RoleClient.GetMembers(ctx, &rolesrv.Filter{Name: name})
+	members, err := r.RoleClient.GetMembers(ctx, &roleSrv.Filter{Name: name})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -99,12 +101,12 @@ func (r Roles) ListMembers(ctx context.Context, name string) string {
 }
 
 func (r Roles) RemoveAllMembers(ctx context.Context, name, sender string) error {
-	members, err := r.RoleClient.GetMembers(ctx, &rolesrv.Filter{Name: name})
+	members, err := r.RoleClient.GetMembers(ctx, &roleSrv.Filter{Name: name})
 	if err != nil {
 		return err
 	}
 
-	_, err = r.RoleClient.RemoveMembers(ctx, &rolesrv.Members{Name: members.Members, Filter: name})
+	_, err = r.RoleClient.RemoveMembers(ctx, &roleSrv.Members{Name: members.Members, Filter: name})
 	if err != nil {
 		return err
 	}
@@ -128,7 +130,7 @@ func (r Roles) AddMember(ctx context.Context, sender, user, filter string) strin
 	}
 
 	_, err = r.RoleClient.AddMembers(ctx,
-		&rolesrv.Members{Name: []string{user}, Filter: filter})
+		&roleSrv.Members{Name: []string{user}, Filter: filter})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -152,7 +154,7 @@ func (r Roles) RemoveMember(ctx context.Context, sender, user, filter string) st
 	}
 
 	_, err = r.RoleClient.RemoveMembers(ctx,
-		&rolesrv.Members{Name: []string{user}, Filter: filter})
+		&roleSrv.Members{Name: []string{user}, Filter: filter})
 	if err != nil {
 		return common.SendFatal(err.Error())
 	}
@@ -164,7 +166,6 @@ func (r Roles) RemoveMember(ctx context.Context, sender, user, filter string) st
 
 	return common.SendSuccess(fmt.Sprintf("Removed '%s' from '%s'\n", user, filter))
 }
-
 
 func (r Roles) SyncMembers(ctx context.Context, sender string) string {
 	//var buffer bytes.Buffer

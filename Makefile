@@ -45,7 +45,7 @@ fmt:
 	go fmt $$(go list ./... | grep -v /vendor/) ; \
 
 docker:
-	docker buildx build --build-arg VERSION=${VERSION} --build-arg COMMIT=${COMMIT} --build-arg BRANCH=${BRANCH} --build-arg BINARY=${BINARY} --platform=linux/amd64,linux/arm64 -t ${GITHUB_USERNAME}/${BINARY}:${VERSION} -t ${GITHUB_USERNAME}/${BINARY}:latest --push .
+	docker buildx build --build-arg VERSION=${VERSION} --build-arg COMMIT=${COMMIT} --build-arg BRANCH=${BRANCH} --build-arg BINARY=${BINARY} --platform=linux/amd64 -t ${GITHUB_USERNAME}/${BINARY}:${VERSION} -t ${GITHUB_USERNAME}/${BINARY}:latest --push .
 
 install-illumos: illumos
 	cp ${BINARY}-illumos-${GOARCH} /usr/local/bin/${BINARY}
@@ -56,4 +56,10 @@ clean:
 	-rm -f ${VET_REPORT}
 	-rm -f ${BINARY}-*
 
-.PHONY: linux illumos darwin windows test fmt docker clean
+migrate:
+	migrate -source file://sql/ --database postgres://chremoas_dev@10.42.1.30:5432/chremoas_dev_roles up
+
+migrate-drop:
+	migrate -source file://sql/ --database postgres://chremoas_dev@10.42.1.30:5432/chremoas_dev_roles drop
+
+.PHONY: linux illumos darwin windows test fmt docker clean migrate

@@ -1,4 +1,11 @@
-DROP INDEX role_name_uindex ON roles;
+DROP INDEX permission_membership_uindex;
+DROP TABLE permission_membership;
+DROP INDEX permissions_uindex;
+DROP TABLE permissions;
+DROP TABLE role_filters;
+DROP INDEX name_uindex;
 DROP TABLE roles;
-DROP INDEX member_uindex ON role_membership;
-CREATE TABLE role_membership;
+DROP INDEX filter_membership_uindex;
+DROP TABLE filter_membership;
+DROP INDEX filters_uindex;
+DROP TABLE filters;
